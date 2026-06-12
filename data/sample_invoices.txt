@@ -1,0 +1,105 @@
+INVOICE 1: STANDARD TAX INVOICE (STRUCTURED) 
+TAX INVOICE
+Invoice Number: INV/2023/001
+Date: 15-10-2023
+GSTIN: 07AABCU9603R1ZM
+Customer: Sharma Enterprises
+Contact Person: Rajesh Sharma
+Email: rajesh.sharma@sharmaenterprises.com
+Phone: +91 98765 43210
+Address: 123 Business Street, Connaught Place, New Delhi - 110001
+
+Services Rendered:
+- Software Development: ₹85,000.00
+- IT Consulting: ₹45,000.00
+
+Subtotal: ₹1,30,000.00
+GST (18%): ₹23,400.00
+Total Amount: ₹1,53,400.00
+
+Payment Terms: 15 days
+Bank Details: HDFC Bank, Account No: 12345678901234
+
+INVOICE 2: MINIMAL INVOICE (LESS STRUCTURED) 
+INVOICE
+INV/MUM/2023/002
+Date: 16-10-2023
+
+Bill To:
+Patil Industries
+456 Industrial Estate, Mumbai
+billing@patilindustries.com
++91 97654 32109
+
+Manufacturing equipment supply and installation
+Total: ₹2,75,000.00
+
+INVOICE 3: SERVICE BILL (UNSTRUCTURED FORMAT) 
+Reddy Technologies
+789 Tech Park, Bangalore
+Phone: +91 96543 21098
+
+Service Bill
+Date: 17-10-2023
+
+Provided cloud infrastructure services and maintenance support for the month of October 2023. 
+Total: ₹3,50,000.00.
+
+Thank you for your business.
+
+INVOICE 4: EXPORT DOCUMENT (DIFFERENT FIELD NAMES) 
+COMMERCIAL INVOICE
+Document ID: EXP/2023/004
+Invoice Date: 18-10-2023
+Client: Kumar Exporters
+Email Address: finance@kumarexporters.com
+Location: 321 Export Tower, Chennai
+
+Description of Services:
+Shipping services for exports.
+
+Grand Total: ₹4,25,000.00
+
+INVOICE 5: TRADING RECEIPT (ALTERNATIVE LAYOUT) 
+TRADING RECEIPT
+Receipt No: TRD/KOL/2023/005
+Issued On: 19-10-2023
+Customer Name: Das Trading Company
+Contact: accounts@dastrading.com
+Mobile: +91 95432 10987
+
+Trading commission for goods supplied.
+Amount Payable: ₹1,85,000.00
+
+INVOICE 6: MIXED FORMAT (COMBINED STRUCTURED/UNSTRUCTURED) 
+MONTHLY SERVICE INVOICE
+
+Dear Valued Customer,
+
+This invoice is for services provided during October 2023.
+Invoice Reference: MSI/2023/006
+Billing Date: 20-10-2023
+
+Customer Details:
+Tech Solutions Pvt Ltd
+contact@techsolutions.com
++91 94321 09876
+
+Services include monthly maintenance and support.
+The total amount due is ₹2,50,000.00.
+
+Please make payment within 30 days.
+
+INVOICE 7: INTERNATIONAL FORMAT (DIFFERENT CURRENCY) 
+PROFORMA INVOICE
+Invoice #: PRO/2023/007
+Date: 21-10-2023
+
+Client: Global Imports Inc.
+Email: purchases@globalimports.com
+Phone: +1-555-0123
+
+Description: Custom software development services
+Total Amount: $15,000.00 USD
+
+Payment Terms: Net 30 days
