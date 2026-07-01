@@ -3,1121 +3,1054 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DocuMind AI — Intelligent Document Platform</title>
-  <meta name="description" content="AI-powered document intelligence platform. Upload PDFs, extract data, and chat with your documents using state-of-the-art AI models." />
+  <title>DocAI — Intelligent Document Platform</title>
+  <meta name="description" content="Production-grade AI platform for intelligent PDF document processing, RAG-backed Q&A, and structured data extraction using LangChain + GPT-4o-mini." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
-    /* ── Design tokens ──────────────────────────────────────────────────── */
+    /* ── Design Tokens ─────────────────────────────────────────────────── */
     :root {
-      --bg-base:       #090d1f;
-      --bg-surface:    #0f1629;
-      --bg-elevated:   #161d35;
-      --bg-card:       #1a2240;
-      --border:        rgba(99, 130, 255, 0.15);
-      --border-active: rgba(99, 130, 255, 0.45);
-
-      --accent-1: #6382ff;
-      --accent-2: #a259ff;
-      --accent-3: #00d4ff;
-      --accent-grad: linear-gradient(135deg, #6382ff 0%, #a259ff 50%, #00d4ff 100%);
-      --accent-soft: linear-gradient(135deg, rgba(99,130,255,.12), rgba(162,89,255,.12));
-
-      --text-primary:   #eef0ff;
-      --text-secondary: #8b9ac9;
-      --text-muted:     #4a5580;
-
-      --success: #22c55e;
-      --warning: #f59e0b;
-      --danger:  #ef4444;
-
-      --radius-sm: 8px;
-      --radius-md: 14px;
-      --radius-lg: 20px;
-      --radius-xl: 28px;
-
-      --shadow-sm: 0 2px 12px rgba(0,0,0,.4);
-      --shadow-md: 0 8px 32px rgba(0,0,0,.5);
-      --shadow-glow: 0 0 40px rgba(99,130,255,.15);
+      --bg-base:        #0a0b0f;
+      --bg-surface:     #111318;
+      --bg-elevated:    #1a1d24;
+      --bg-hover:       #21252f;
+      --border:         #2a2e3a;
+      --border-light:   #3a3f50;
+      --accent:         #6366f1;
+      --accent-hover:   #818cf8;
+      --accent-dim:     rgba(99,102,241,0.15);
+      --success:        #22c55e;
+      --success-dim:    rgba(34,197,94,0.12);
+      --warning:        #f59e0b;
+      --warning-dim:    rgba(245,158,11,0.12);
+      --danger:         #ef4444;
+      --danger-dim:     rgba(239,68,68,0.12);
+      --text-primary:   #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted:     #64748b;
+      --radius:         12px;
+      --radius-sm:      8px;
+      --shadow:         0 4px 24px rgba(0,0,0,0.4);
+      --shadow-lg:      0 8px 48px rgba(0,0,0,0.6);
+      --font:           'Inter', system-ui, sans-serif;
+      --font-mono:      'JetBrains Mono', monospace;
+      --transition:     0.2s ease;
     }
 
-    /* ── Reset ──────────────────────────────────────────────────────────── */
+    /* ── Reset ─────────────────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
+    html, body { height: 100%; }
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: var(--font);
       background: var(--bg-base);
       color: var(--text-primary);
-      min-height: 100vh;
-      overflow-x: hidden;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
     }
+    a { color: var(--accent); text-decoration: none; }
+    button { cursor: pointer; font-family: var(--font); }
+    input, textarea { font-family: var(--font); }
 
-    /* ── Animated background ─────────────────────────────────────────────── */
-    body::before {
-      content: '';
-      position: fixed; inset: 0; z-index: -1;
-      background:
-        radial-gradient(ellipse 80% 50% at 20% 20%, rgba(99,130,255,.08) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(162,89,255,.07) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 60% at 50% 50%, rgba(0,212,255,.04) 0%, transparent 70%);
-    }
+    /* ── Layout ─────────────────────────────────────────────────────────── */
+    .app { display: flex; flex-direction: column; min-height: 100vh; }
 
-    /* ── Scrollbar ───────────────────────────────────────────────────────── */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg-surface); }
-    ::-webkit-scrollbar-thumb { background: var(--accent-1); border-radius: 3px; }
-
-    /* ── Layout ──────────────────────────────────────────────────────────── */
-    .app { display: flex; flex-direction: column; height: 100vh; }
-
-    /* ── Header ──────────────────────────────────────────────────────────── */
-    header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 28px;
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    .header {
+      display: flex; align-items: center; gap: 16px;
+      padding: 0 32px;
       height: 64px;
-      background: rgba(15, 22, 41, 0.85);
+      background: rgba(17,19,24,0.9);
       backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
       position: sticky; top: 0; z-index: 100;
     }
-
     .logo {
       display: flex; align-items: center; gap: 10px;
-      font-size: 1.2rem; font-weight: 700; letter-spacing: -0.5px;
+      font-size: 18px; font-weight: 700; color: var(--text-primary);
     }
     .logo-icon {
-      width: 36px; height: 36px; border-radius: 10px;
-      background: var(--accent-grad);
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), #a78bfa);
+      border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-      box-shadow: 0 4px 16px rgba(99,130,255,.3);
+      font-size: 16px;
     }
-    .logo-text { background: var(--accent-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-
-    .nav-pills { display: flex; gap: 4px; }
-    .nav-pill {
-      padding: 7px 18px;
-      border-radius: 50px;
-      font-size: 0.85rem; font-weight: 500;
-      cursor: pointer; border: none; outline: none;
-      background: transparent; color: var(--text-secondary);
-      transition: all .2s ease;
+    .logo-badge {
+      font-size: 11px; font-weight: 500; letter-spacing: 0.05em;
+      background: var(--accent-dim);
+      color: var(--accent-hover);
+      border: 1px solid rgba(99,102,241,0.3);
+      padding: 2px 8px; border-radius: 20px;
     }
-    .nav-pill:hover { color: var(--text-primary); background: var(--bg-elevated); }
-    .nav-pill.active { background: var(--accent-soft); color: var(--accent-1); border: 1px solid var(--border-active); }
-
     .header-status {
+      margin-left: auto;
       display: flex; align-items: center; gap: 8px;
-      font-size: 0.8rem; color: var(--text-secondary);
+      font-size: 13px; color: var(--text-muted);
     }
     .status-dot {
       width: 8px; height: 8px; border-radius: 50%;
-      background: var(--success);
-      box-shadow: 0 0 8px var(--success);
-      animation: pulse-dot 2s infinite;
+      background: var(--text-muted);
+      transition: background var(--transition);
     }
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; } 50% { opacity: .5; }
+    .status-dot.healthy { background: var(--success); box-shadow: 0 0 8px var(--success); }
+
+    /* ── Navigation Tabs ────────────────────────────────────────────────── */
+    .nav-tabs {
+      display: flex; gap: 2px;
+      padding: 12px 32px 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-surface);
+    }
+    .tab-btn {
+      padding: 10px 20px;
+      border: none; background: none;
+      color: var(--text-muted);
+      font-size: 14px; font-weight: 500;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      transition: all var(--transition);
+      position: relative;
+    }
+    .tab-btn::after {
+      content: '';
+      position: absolute; bottom: -1px; left: 0; right: 0; height: 2px;
+      background: var(--accent); border-radius: 2px 2px 0 0;
+      transform: scaleX(0); transition: transform var(--transition);
+    }
+    .tab-btn.active { color: var(--text-primary); background: var(--bg-elevated); }
+    .tab-btn.active::after { transform: scaleX(1); }
+    .tab-btn:hover:not(.active) { color: var(--text-secondary); background: var(--bg-hover); }
+    .tab-btn .tab-count {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--accent-dim); color: var(--accent-hover);
+      font-size: 11px; margin-left: 6px;
     }
 
-    /* ── Main content ─────────────────────────────────────────────────────── */
-    main { flex: 1; overflow: hidden; display: flex; }
+    /* ── Main Content ───────────────────────────────────────────────────── */
+    .main { flex: 1; padding: 32px; max-width: 1200px; margin: 0 auto; width: 100%; }
+    .tab-panel { display: none; animation: fadeIn 0.2s ease; }
+    .tab-panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-    .view { display: none; width: 100%; height: 100%; overflow-y: auto; padding: 32px; }
-    .view.active { display: flex; flex-direction: column; gap: 28px; animation: fadeIn .3s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* ── Cards ───────────────────────────────────────────────────────────── */
+    /* ── Cards ──────────────────────────────────────────────────────────── */
     .card {
-      background: var(--bg-card);
+      background: var(--bg-surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius);
       padding: 24px;
-      box-shadow: var(--shadow-sm);
-      transition: border-color .2s, box-shadow .2s;
     }
-    .card:hover { border-color: var(--border-active); box-shadow: var(--shadow-glow); }
-
-    .section-title {
-      font-size: 1.35rem; font-weight: 700; letter-spacing: -0.3px;
-      margin-bottom: 6px;
+    .card-title {
+      font-size: 16px; font-weight: 600; color: var(--text-primary);
+      margin-bottom: 4px;
     }
-    .section-sub { font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 24px; }
+    .card-subtitle {
+      font-size: 13px; color: var(--text-muted); margin-bottom: 20px;
+    }
 
-    /* ── Upload zone ─────────────────────────────────────────────────────── */
+    /* ── Buttons ─────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px;
+      border: none; border-radius: var(--radius-sm);
+      font-size: 14px; font-weight: 500;
+      transition: all var(--transition);
+    }
+    .btn-primary {
+      background: var(--accent); color: white;
+    }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-primary:active { transform: none; }
+    .btn-secondary {
+      background: var(--bg-elevated); color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .btn-danger { background: var(--danger-dim); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); }
+    .btn-danger:hover { background: var(--danger); color: white; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+    /* ── Upload Zone ─────────────────────────────────────────────────────── */
     .upload-zone {
-      border: 2px dashed var(--border-active);
-      border-radius: var(--radius-xl);
-      padding: 64px 32px;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 32px;
       text-align: center;
       cursor: pointer;
-      transition: all .25s ease;
-      background: var(--accent-soft);
+      transition: all var(--transition);
+      position: relative;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .upload-icon { font-size: 40px; margin-bottom: 12px; }
+    .upload-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    .upload-subtitle { font-size: 13px; color: var(--text-muted); }
+
+    /* ── Progress Bar ────────────────────────────────────────────────────── */
+    .progress-bar {
+      height: 4px; border-radius: 2px;
+      background: var(--bg-elevated);
+      overflow: hidden; margin: 12px 0;
+    }
+    .progress-fill {
+      height: 100%; border-radius: 2px;
+      background: linear-gradient(90deg, var(--accent), #a78bfa);
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+    .progress-fill.indeterminate {
+      width: 40% !important;
+      animation: slide 1.4s ease-in-out infinite;
+    }
+    @keyframes slide {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
+
+    /* ── Alert Banners ───────────────────────────────────────────────────── */
+    .alert {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 14px 16px; border-radius: var(--radius-sm);
+      font-size: 14px; margin-bottom: 16px;
+    }
+    .alert-success { background: var(--success-dim); border: 1px solid rgba(34,197,94,0.2); color: #4ade80; }
+    .alert-error   { background: var(--danger-dim);  border: 1px solid rgba(239,68,68,0.2);  color: #f87171; }
+    .alert-info    { background: var(--accent-dim);  border: 1px solid rgba(99,102,241,0.2); color: var(--accent-hover); }
+    .alert-warn    { background: var(--warning-dim); border: 1px solid rgba(245,158,11,0.2); color: #fbbf24; }
+
+    /* ── Document Grid ───────────────────────────────────────────────────── */
+    .doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+    .doc-card {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px;
+      cursor: pointer; transition: all var(--transition);
       position: relative; overflow: hidden;
     }
-    .upload-zone:hover, .upload-zone.drag-over {
-      border-color: var(--accent-1);
-      background: rgba(99,130,255,.1);
-      transform: scale(1.005);
+    .doc-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--accent), #a78bfa);
+      transform: scaleX(0); transform-origin: left;
+      transition: transform var(--transition);
     }
-    .upload-icon {
-      font-size: 3.5rem; margin-bottom: 16px;
-      display: inline-block;
-      animation: float 3s ease-in-out infinite;
+    .doc-card:hover { border-color: var(--border-light); transform: translateY(-2px); box-shadow: var(--shadow); }
+    .doc-card:hover::before { transform: scaleX(1); }
+    .doc-card.selected { border-color: var(--accent); background: rgba(99,102,241,0.05); }
+    .doc-name { font-size: 14px; font-weight: 600; margin-bottom: 8px; word-break: break-all; }
+    .doc-meta { display: flex; gap: 12px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
+    .doc-meta-item { display: flex; align-items: center; gap: 4px; }
+    .completion-bar {
+      height: 3px; border-radius: 2px;
+      background: var(--bg-hover); margin-top: 12px;
     }
-    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-    .upload-title { font-size: 1.3rem; font-weight: 600; margin-bottom: 8px; }
-    .upload-sub { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 24px; }
-    #fileInput { display: none; }
-    .upload-btn {
-      padding: 11px 28px;
-      border-radius: 50px; border: none; cursor: pointer;
-      font-size: 0.9rem; font-weight: 600;
-      background: var(--accent-grad);
-      color: #fff;
-      box-shadow: 0 4px 20px rgba(99,130,255,.35);
-      transition: transform .15s, box-shadow .15s;
+    .completion-fill {
+      height: 100%; border-radius: 2px;
+      background: linear-gradient(90deg, var(--success), #86efac);
     }
-    .upload-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(99,130,255,.5); }
-    .upload-btn:active { transform: translateY(0); }
-
-    /* ── Progress bar ────────────────────────────────────────────────────── */
-    .progress-container { display: none; margin-top: 20px; }
-    .progress-container.visible { display: block; }
-    .progress-bar-track {
-      height: 6px; border-radius: 3px;
-      background: var(--bg-elevated); overflow: hidden;
-    }
-    .progress-bar-fill {
-      height: 100%; border-radius: 3px;
-      background: var(--accent-grad);
-      width: 0%; transition: width .4s ease;
-      animation: shimmer 1.5s infinite;
-    }
-    @keyframes shimmer {
-      0% { filter: brightness(1); } 50% { filter: brightness(1.3); } 100% { filter: brightness(1); }
-    }
-    .progress-label { font-size: .82rem; color: var(--text-secondary); margin-top: 8px; }
-
-    /* ── Stats grid ──────────────────────────────────────────────────────── */
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
-    .stat-card {
-      background: var(--bg-elevated);
+    .doc-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .tag {
+      font-size: 11px; padding: 2px 8px; border-radius: 20px;
+      background: var(--bg-surface); color: var(--text-secondary);
       border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 20px;
-      transition: all .2s;
     }
-    .stat-card:hover { border-color: var(--border-active); transform: translateY(-2px); }
-    .stat-value {
-      font-size: 2rem; font-weight: 800; letter-spacing: -1px;
-      background: var(--accent-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    }
-    .stat-label { font-size: .8rem; color: var(--text-secondary); margin-top: 4px; }
-    .stat-icon { font-size: 1.5rem; margin-bottom: 8px; }
+    .tag.highlight { background: var(--accent-dim); color: var(--accent-hover); border-color: rgba(99,102,241,0.3); }
+    .doc-actions { display: flex; gap: 8px; margin-top: 14px; }
 
-    /* ── Document list ───────────────────────────────────────────────────── */
-    .doc-list { display: flex; flex-direction: column; gap: 12px; }
-    .doc-item {
-      display: flex; align-items: center; gap: 16px;
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 16px 20px;
-      cursor: pointer; transition: all .2s;
+    /* ── Fields Panel ────────────────────────────────────────────────────── */
+    .fields-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
     }
-    .doc-item:hover { border-color: var(--border-active); background: var(--bg-card); transform: translateX(4px); }
-    .doc-item.selected { border-color: var(--accent-1); background: rgba(99,130,255,.08); }
-    .doc-icon {
-      width: 44px; height: 44px; border-radius: 10px;
-      background: var(--accent-soft);
-      border: 1px solid var(--border-active);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.3rem; flex-shrink: 0;
+    .field-row {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 12px 14px;
     }
-    .doc-meta { flex: 1; min-width: 0; }
-    .doc-name { font-weight: 600; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .doc-details { font-size: .78rem; color: var(--text-secondary); margin-top: 3px; display: flex; gap: 14px; }
-    .doc-badge {
-      padding: 3px 10px; border-radius: 50px; font-size: .72rem; font-weight: 600;
-      background: rgba(34,197,94,.1); color: var(--success);
-      border: 1px solid rgba(34,197,94,.2); white-space: nowrap;
-    }
-    .doc-actions { display: flex; gap: 8px; }
-    .icon-btn {
-      width: 32px; height: 32px; border-radius: 8px; border: none; cursor: pointer;
-      background: var(--bg-card); color: var(--text-secondary); font-size: 0.9rem;
-      display: flex; align-items: center; justify-content: center;
-      transition: all .15s;
-    }
-    .icon-btn:hover { background: var(--danger); color: #fff; }
-    .icon-btn.export { color: var(--accent-1); }
-    .icon-btn.export:hover { background: rgba(99,130,255,.15); color: var(--accent-1); }
+    .field-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .field-value { font-size: 14px; font-weight: 500; word-break: break-all; }
+    .field-value.empty { color: var(--text-muted); font-style: italic; font-size: 13px; }
 
-    /* ── Fields grid ─────────────────────────────────────────────────────── */
-    .fields-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-    .field-chip {
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 12px 14px;
-    }
-    .field-key { font-size: .72rem; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); margin-bottom: 4px; }
-    .field-val { font-size: .92rem; font-weight: 500; font-family: 'JetBrains Mono', monospace; word-break: break-all; }
-    .field-val.empty { color: var(--text-muted); font-style: italic; font-family: 'Inter', sans-serif; font-size: .85rem; }
-
-    /* ── Completion bar ──────────────────────────────────────────────────── */
-    .completion-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-    .completion-track { flex: 1; height: 6px; background: var(--bg-elevated); border-radius: 3px; overflow: hidden; }
-    .completion-fill { height: 100%; border-radius: 3px; background: var(--accent-grad); transition: width 1s ease; }
-    .completion-label { font-size: .8rem; color: var(--text-secondary); width: 40px; text-align: right; }
-
-    /* ── Chat ────────────────────────────────────────────────────────────── */
-    .chat-layout { display: grid; grid-template-columns: 280px 1fr; gap: 20px; height: calc(100vh - 128px); }
-
-    .chat-sidebar {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      display: flex; flex-direction: column;
-      overflow: hidden;
-    }
-    .chat-sidebar-header {
-      padding: 16px 18px;
-      border-bottom: 1px solid var(--border);
-      font-size: .85rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .5px;
-    }
-    .chat-doc-list { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
-    .chat-doc-item {
-      padding: 10px 12px; border-radius: var(--radius-sm); cursor: pointer;
-      font-size: .85rem; transition: all .15s;
-      border: 1px solid transparent;
-    }
-    .chat-doc-item:hover { background: var(--bg-elevated); }
-    .chat-doc-item.selected { background: rgba(99,130,255,.1); border-color: var(--border-active); color: var(--accent-1); font-weight: 500; }
-    .chat-doc-item.all-docs { color: var(--accent-3); font-weight: 600; }
-
-    .chat-main {
-      display: flex; flex-direction: column;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-    }
-    .chat-header {
-      padding: 16px 20px; border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .chat-doc-label { font-size: .85rem; color: var(--text-secondary); }
-    .chat-doc-name { font-weight: 600; font-size: .95rem; }
-
+    /* ── Chat UI ─────────────────────────────────────────────────────────── */
+    .chat-layout { display: grid; grid-template-columns: 280px 1fr; gap: 20px; height: calc(100vh - 200px); }
+    .chat-sidebar { display: flex; flex-direction: column; gap: 12px; }
+    .chat-main { display: flex; flex-direction: column; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
     .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-
-    .msg { display: flex; gap: 12px; align-items: flex-start; animation: msgIn .25s ease; }
+    .msg {
+      max-width: 80%; display: flex; flex-direction: column; gap: 4px;
+      animation: msgIn 0.2s ease;
+    }
     @keyframes msgIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-    .msg.user { flex-direction: row-reverse; }
-
-    .msg-avatar {
-      width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; font-size: .9rem;
-    }
-    .msg.user .msg-avatar { background: var(--accent-grad); }
-    .msg.ai .msg-avatar { background: var(--bg-elevated); border: 1px solid var(--border-active); }
-
+    .msg.user { align-self: flex-end; }
+    .msg.assistant { align-self: flex-start; }
     .msg-bubble {
-      max-width: 72%; padding: 12px 16px; border-radius: var(--radius-md);
-      font-size: .9rem; line-height: 1.6;
+      padding: 12px 16px; border-radius: var(--radius);
+      font-size: 14px; line-height: 1.6;
     }
-    .msg.user .msg-bubble { background: var(--accent-1); color: #fff; border-radius: var(--radius-md) 4px var(--radius-md) var(--radius-md); }
-    .msg.ai .msg-bubble  { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 4px var(--radius-md) var(--radius-md) var(--radius-md); }
-
-    .msg-meta { font-size: .72rem; color: var(--text-muted); margin-top: 4px; display: flex; gap: 10px; align-items: center; }
-    .confidence-pill {
-      padding: 1px 7px; border-radius: 50px; font-size: .68rem; font-weight: 600;
+    .msg.user .msg-bubble {
+      background: var(--accent); color: white;
+      border-radius: var(--radius) var(--radius) 4px var(--radius);
     }
-    .conf-high { background: rgba(34,197,94,.12); color: var(--success); }
-    .conf-mid  { background: rgba(245,158,11,.12); color: var(--warning); }
-    .conf-low  { background: rgba(239,68,68,.12); color: var(--danger); }
-
-    .typing-indicator .msg-bubble { padding: 14px 16px; }
-    .dots { display: flex; gap: 4px; }
-    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); animation: bounce .9s infinite; }
-    .dot:nth-child(2){ animation-delay:.15s; } .dot:nth-child(3){ animation-delay:.3s; }
-    @keyframes bounce { 0%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
-
+    .msg.assistant .msg-bubble {
+      background: var(--bg-elevated); color: var(--text-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius) var(--radius) var(--radius) 4px;
+    }
+    .msg-meta { font-size: 11px; color: var(--text-muted); padding: 0 4px; }
+    .msg-tools { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .tool-badge {
+      font-size: 10px; padding: 2px 8px; border-radius: 12px;
+      background: var(--accent-dim); color: var(--accent-hover);
+      border: 1px solid rgba(99,102,241,0.2);
+      font-family: var(--font-mono);
+    }
     .chat-input-area {
-      padding: 16px 20px; border-top: 1px solid var(--border);
+      padding: 16px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-elevated);
+    }
+    .chat-input-row {
       display: flex; gap: 10px; align-items: flex-end;
     }
     .chat-input {
-      flex: 1; background: var(--bg-elevated); border: 1px solid var(--border);
-      border-radius: var(--radius-md); padding: 12px 16px;
-      color: var(--text-primary); font-size: .92rem; font-family: 'Inter', sans-serif;
-      resize: none; outline: none; max-height: 120px; transition: border .2s;
+      flex: 1; background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text-primary);
+      padding: 12px 16px; font-size: 14px; resize: none; min-height: 48px; max-height: 120px;
+      transition: border-color var(--transition);
     }
-    .chat-input:focus { border-color: var(--border-active); }
+    .chat-input:focus { outline: none; border-color: var(--accent); }
     .chat-input::placeholder { color: var(--text-muted); }
+    .typing-indicator { display: flex; gap: 4px; align-items: center; padding: 12px 16px; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); animation: bounce 1.2s ease infinite; }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce { 0%,80%,100% { transform: scale(1); opacity: 0.4; } 40% { transform: scale(1.3); opacity: 1; } }
 
-    .send-btn {
-      width: 42px; height: 42px; border-radius: 10px; border: none; cursor: pointer;
-      background: var(--accent-grad); color: #fff; font-size: 1rem;
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 4px 16px rgba(99,130,255,.3);
-      transition: transform .15s, box-shadow .15s;
-      flex-shrink: 0;
-    }
-    .send-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99,130,255,.5); }
-    .send-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-
-    .quick-questions { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 20px 12px; }
-    .quick-q {
-      padding: 5px 13px; border-radius: 50px; font-size: .78rem;
+    /* ── Analytics ───────────────────────────────────────────────────────── */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card {
       background: var(--bg-elevated); border: 1px solid var(--border);
-      color: var(--text-secondary); cursor: pointer; transition: all .15s;
+      border-radius: var(--radius); padding: 20px;
     }
-    .quick-q:hover { border-color: var(--border-active); color: var(--accent-1); }
+    .stat-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .stat-value { font-size: 28px; font-weight: 700; color: var(--text-primary); }
+    .stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .field-stat-bar { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .field-stat-bar:last-child { border-bottom: none; }
+    .field-stat-name { width: 140px; font-size: 13px; color: var(--text-secondary); }
+    .field-stat-track { flex: 1; height: 6px; background: var(--bg-hover); border-radius: 3px; overflow: hidden; }
+    .field-stat-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent), #a78bfa); transition: width 0.5s ease; }
+    .field-stat-pct { width: 45px; font-size: 12px; color: var(--text-muted); text-align: right; font-family: var(--font-mono); }
 
-    /* ── Analytics view ──────────────────────────────────────────────────── */
-    .analytics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-
-    .progress-list { display: flex; flex-direction: column; gap: 12px; }
-    .progress-item { display: flex; flex-direction: column; gap: 4px; }
-    .progress-item-header { display: flex; justify-content: space-between; font-size: .85rem; }
-    .field-name { color: var(--text-secondary); text-transform: capitalize; }
-    .field-pct { font-weight: 600; color: var(--accent-1); }
-    .mini-track { height: 4px; background: var(--bg-elevated); border-radius: 2px; overflow: hidden; }
-    .mini-fill { height: 100%; border-radius: 2px; background: var(--accent-grad); transition: width 1.2s ease; }
-
-    /* ── Empty state ─────────────────────────────────────────────────────── */
-    .empty-state {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 12px; padding: 80px 20px; color: var(--text-muted); text-align: center;
+    /* ── Search Bar ──────────────────────────────────────────────────────── */
+    .search-bar {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 16px;
+      transition: border-color var(--transition);
     }
-    .empty-state .icon { font-size: 3rem; opacity: .4; }
-    .empty-state p { font-size: .9rem; }
-
-    /* ── Toast ───────────────────────────────────────────────────────────── */
-    #toast-container {
-      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-      display: flex; flex-direction: column; gap: 10px;
+    .search-bar:focus-within { border-color: var(--accent); }
+    .search-input {
+      flex: 1; background: none; border: none; color: var(--text-primary);
+      font-size: 14px;
     }
-    .toast {
-      padding: 12px 18px; border-radius: var(--radius-md);
-      font-size: .88rem; min-width: 220px;
-      backdrop-filter: blur(20px);
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow-md);
-      animation: toastIn .3s ease;
-    }
-    @keyframes toastIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: none; } }
-    .toast.success { background: rgba(22,163,74,.12); border-color: rgba(34,197,94,.3); color: var(--success); }
-    .toast.error   { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.3); color: var(--danger); }
-    .toast.info    { background: rgba(99,130,255,.12); border-color: var(--border-active); color: var(--accent-1); }
+    .search-input:focus { outline: none; }
+    .search-input::placeholder { color: var(--text-muted); }
 
-    /* ── Line items table ────────────────────────────────────────────────── */
-    .line-items-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-    .line-items-table th { padding: 8px 12px; text-align: left; color: var(--text-muted); font-size: .74rem; text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid var(--border); }
-    .line-items-table td { padding: 10px 12px; border-bottom: 1px solid rgba(99,130,255,.06); }
-    .line-items-table tr:last-child td { border-bottom: none; }
+    /* ── Empty State ─────────────────────────────────────────────────────── */
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+    .empty-title { font-size: 16px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+    .empty-text { font-size: 14px; }
 
-    /* ── Responsive ───────────────────────────────────────────────────────── */
+    /* ── Utilities ───────────────────────────────────────────────────────── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .flex { display: flex; }
+    .flex-center { display: flex; align-items: center; justify-content: center; }
+    .gap-8 { gap: 8px; }
+    .gap-12 { gap: 12px; }
+    .gap-16 { gap: 16px; }
+    .mt-12 { margin-top: 12px; }
+    .mt-16 { margin-top: 16px; }
+    .mt-24 { margin-top: 24px; }
+    .mb-16 { margin-bottom: 16px; }
+    .text-sm { font-size: 13px; }
+    .text-muted { color: var(--text-muted); }
+    .text-mono { font-family: var(--font-mono); }
+    .w-full { width: 100%; }
+    .hidden { display: none !important; }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Responsive ──────────────────────────────────────────────────────── */
     @media (max-width: 768px) {
+      .header { padding: 0 16px; }
+      .nav-tabs { padding: 12px 16px 0; overflow-x: auto; }
+      .main { padding: 16px; }
       .chat-layout { grid-template-columns: 1fr; height: auto; }
-      .chat-sidebar { max-height: 180px; }
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
-      .analytics-grid { grid-template-columns: 1fr; }
-      header { padding: 0 16px; }
-      .view { padding: 16px; }
+      .chat-sidebar { display: none; }
+      .chat-main { height: 60vh; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .fields-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
+<div class="app" id="app">
 
-<div class="app">
-  <!-- ── Header ──────────────────────────────────────────────────────── -->
-  <header>
+  <!-- Header -->
+  <header class="header">
     <div class="logo">
-      <div class="logo-icon">🧠</div>
-      <span class="logo-text">DocuMind AI</span>
+      <div class="logo-icon">🤖</div>
+      DocAI
+      <span class="logo-badge">v2.0</span>
     </div>
-
-    <nav class="nav-pills">
-      <button class="nav-pill active" id="nav-upload" onclick="showView('upload')">Upload</button>
-      <button class="nav-pill" id="nav-documents" onclick="showView('documents')">Documents</button>
-      <button class="nav-pill" id="nav-chat" onclick="showView('chat')">Chat</button>
-      <button class="nav-pill" id="nav-analytics" onclick="showView('analytics')">Analytics</button>
-    </nav>
-
     <div class="header-status">
       <div class="status-dot" id="statusDot"></div>
-      <span id="statusText">Ready</span>
+      <span id="statusText">Connecting...</span>
     </div>
   </header>
 
-  <!-- ── Main ────────────────────────────────────────────────────────── -->
-  <main>
+  <!-- Tabs -->
+  <nav class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('upload')" id="tab-upload">📤 Upload</button>
+    <button class="tab-btn" onclick="switchTab('library')" id="tab-library">
+      📚 Library <span class="tab-count" id="docCount">0</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('chat')" id="tab-chat">💬 Chat</button>
+    <button class="tab-btn" onclick="switchTab('analytics')" id="tab-analytics">📊 Analytics</button>
+  </nav>
 
-    <!-- ══ UPLOAD VIEW ══════════════════════════════════════════════════ -->
-    <section class="view active" id="view-upload">
-      <div>
-        <h1 class="section-title">Upload Documents</h1>
-        <p class="section-sub">Drop your PDF invoices, receipts, or forms and let AI do the rest.</p>
-      </div>
+  <!-- Main Content -->
+  <main class="main">
 
-      <div class="card">
-        <div class="upload-zone" id="dropZone">
-          <span class="upload-icon">📄</span>
-          <div class="upload-title">Drag & drop PDF files here</div>
-          <div class="upload-sub">or click to browse your computer</div>
-          <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
-            Choose Files
+    <!-- ═══════════════════ UPLOAD TAB ═══════════════════ -->
+    <div class="tab-panel active" id="panel-upload">
+      <div class="grid-2">
+        <!-- Upload card -->
+        <div class="card">
+          <div class="card-title">Upload Documents</div>
+          <div class="card-subtitle">PDF files up to 50 MB. Text extraction + AI analysis runs automatically.</div>
+
+          <div class="upload-zone" id="uploadZone">
+            <input type="file" id="fileInput" accept=".pdf" multiple />
+            <div class="upload-icon">📄</div>
+            <div class="upload-title">Drop PDFs here or click to browse</div>
+            <div class="upload-subtitle">Supports single or multiple files</div>
+          </div>
+
+          <div id="uploadProgress" class="hidden mt-12">
+            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px;">
+              <span id="uploadFileName" class="text-muted"></span>
+              <span id="uploadPct" style="color:var(--accent)"></span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill indeterminate" id="progressFill"></div>
+            </div>
+          </div>
+
+          <div id="uploadResult" class="mt-12"></div>
+
+          <button class="btn btn-primary w-full mt-16" id="uploadBtn" onclick="triggerUpload()">
+            ⬆ Upload & Analyze
           </button>
-          <input type="file" id="fileInput" accept=".pdf" multiple />
         </div>
 
-        <div class="progress-container" id="progressContainer">
-          <div class="progress-bar-track">
-            <div class="progress-bar-fill" id="progressFill"></div>
-          </div>
-          <p class="progress-label" id="progressLabel">Processing...</p>
-        </div>
-      </div>
-
-      <!-- Recent uploads stats -->
-      <div class="stats-grid" id="uploadStats">
-        <div class="stat-card">
-          <div class="stat-icon">📂</div>
-          <div class="stat-value" id="statTotal">0</div>
-          <div class="stat-label">Documents Processed</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon">💰</div>
-          <div class="stat-value" id="statAmount">—</div>
-          <div class="stat-label">Total Invoice Value</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon">✅</div>
-          <div class="stat-value" id="statCompletion">—</div>
-          <div class="stat-label">Avg Field Completion</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon">⚡</div>
-          <div class="stat-value" id="statSpeed">—</div>
-          <div class="stat-label">Avg Processing (ms)</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ══ DOCUMENTS VIEW ═══════════════════════════════════════════════ -->
-    <section class="view" id="view-documents">
-      <div>
-        <h1 class="section-title">Document Library</h1>
-        <p class="section-sub">All processed documents with extracted intelligence.</p>
-      </div>
-
-      <div style="display: grid; grid-template-columns: 1fr 400px; gap: 20px; flex: 1;">
-        <!-- List -->
-        <div class="card" style="overflow-y: auto; max-height: calc(100vh - 220px);">
-          <div class="doc-list" id="docList">
-            <div class="empty-state">
-              <div class="icon">📁</div>
-              <p>No documents yet.<br>Upload a PDF to get started.</p>
+        <!-- What happens card -->
+        <div class="card">
+          <div class="card-title">Processing Pipeline</div>
+          <div class="card-subtitle">Every PDF goes through 7 automated stages</div>
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div class="pipeline-step" style="display:flex; gap:14px; align-items:flex-start;">
+              <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-dim);color:var(--accent-hover);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">1</div>
+              <div><div style="font-weight:600;font-size:14px;margin-bottom:2px;">Text Extraction</div><div class="text-sm text-muted">PyMuPDF primary → Tesseract OCR fallback</div></div>
+            </div>
+            <div class="pipeline-step" style="display:flex; gap:14px; align-items:flex-start;">
+              <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-dim);color:var(--accent-hover);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">2</div>
+              <div><div style="font-weight:600;font-size:14px;margin-bottom:2px;">Field Extraction</div><div class="text-sm text-muted">Regex patterns: invoice no., dates, amounts, parties</div></div>
+            </div>
+            <div class="pipeline-step" style="display:flex; gap:14px; align-items:flex-start;">
+              <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-dim);color:var(--accent-hover);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">3</div>
+              <div><div style="font-weight:600;font-size:14px;margin-bottom:2px;">AI Summary</div><div class="text-sm text-muted">LangChain + GPT-4o-mini structured output</div></div>
+            </div>
+            <div class="pipeline-step" style="display:flex; gap:14px; align-items:flex-start;">
+              <div style="width:32px;height:32px;border-radius:50%;background:var(--success-dim);color:var(--success);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">4</div>
+              <div><div style="font-weight:600;font-size:14px;margin-bottom:2px;">DB Persistence</div><div class="text-sm text-muted">SQLAlchemy → SQLite (upgradeable to Postgres)</div></div>
+            </div>
+            <div class="pipeline-step" style="display:flex; gap:14px; align-items:flex-start;">
+              <div style="width:32px;height:32px;border-radius:50%;background:var(--success-dim);color:var(--success);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">5</div>
+              <div><div style="font-weight:600;font-size:14px;margin-bottom:2px;">RAG Indexing</div><div class="text-sm text-muted">Chunked + embedded into ChromaDB for semantic Q&A</div></div>
             </div>
           </div>
         </div>
+      </div>
+    </div>
 
-        <!-- Detail panel -->
-        <div class="card" id="docDetail" style="overflow-y: auto; max-height: calc(100vh - 220px);">
-          <div class="empty-state">
-            <div class="icon">👈</div>
-            <p>Select a document<br>to view details</p>
-          </div>
+    <!-- ═══════════════════ LIBRARY TAB ═══════════════════ -->
+    <div class="tab-panel" id="panel-library">
+      <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px;">
+        <div class="search-bar" style="flex:1;">
+          <span>🔍</span>
+          <input class="search-input" id="semanticSearchInput" placeholder="Semantic search across all documents..." />
+          <button class="btn btn-sm btn-secondary" onclick="semanticSearch()">Search</button>
+        </div>
+        <button class="btn btn-secondary" onclick="loadLibrary()">↻ Refresh</button>
+      </div>
+
+      <div id="searchResults" class="hidden mb-16"></div>
+      <div id="docGrid" class="doc-grid">
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <div class="empty-title">No documents yet</div>
+          <div class="empty-text">Upload PDFs to build your document library</div>
         </div>
       </div>
-    </section>
 
-    <!-- ══ CHAT VIEW ════════════════════════════════════════════════════ -->
-    <section class="view" id="view-chat">
-      <div class="chat-layout">
-        <!-- Sidebar -->
-        <aside class="chat-sidebar">
-          <div class="chat-sidebar-header">📚 Documents</div>
-          <div class="chat-doc-list" id="chatDocList">
-            <div class="chat-doc-item all-docs selected" data-id="all" onclick="selectChatDoc('all', 'All Documents', this)">
-              🌐 All Documents
-            </div>
-          </div>
-        </aside>
-
-        <!-- Chat window -->
-        <div class="chat-main">
-          <div class="chat-header">
+      <!-- Document Detail Panel -->
+      <div id="docDetail" class="hidden mt-24">
+        <div class="card">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
             <div>
-              <div class="chat-doc-label">Asking about</div>
-              <div class="chat-doc-name" id="chatDocName">All Documents</div>
+              <div class="card-title" id="detailFilename"></div>
+              <div class="card-subtitle" id="detailMeta"></div>
             </div>
-            <div style="font-size: .8rem; color: var(--text-muted);" id="chatModelLabel">Model: flan-t5-large</div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-secondary btn-sm" onclick="exportJSON()">↓ JSON</button>
+              <button class="btn btn-secondary btn-sm" onclick="exportCSV()">↓ CSV</button>
+              <button class="btn btn-sm" onclick="chatWithDoc()" style="background:var(--accent);color:white;">💬 Chat</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteDoc()">🗑 Delete</button>
+            </div>
           </div>
 
-          <div class="chat-messages" id="chatMessages">
-            <div class="msg ai">
-              <div class="msg-avatar">🧠</div>
-              <div>
-                <div class="msg-bubble">
-                  Hello! I'm your AI document assistant. Upload some PDFs and I'll answer questions about them — invoice numbers, amounts, dates, parties, and much more. What would you like to know?
+          <div class="grid-2">
+            <div>
+              <div style="font-size:13px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px;">Extracted Fields</div>
+              <div class="fields-grid" id="detailFields"></div>
+            </div>
+            <div>
+              <div style="font-size:13px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px;">AI Summary</div>
+              <div class="card" style="background:var(--bg-elevated); font-size:14px; line-height:1.7;" id="detailSummary"></div>
+              <div style="margin-top:16px;">
+                <div style="font-size:13px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px;">Run Analysis</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button class="btn btn-secondary btn-sm" onclick="runAnalysis('full')">📋 Full Analysis</button>
+                  <button class="btn btn-secondary btn-sm" onclick="runAnalysis('risk')">⚠️ Risk Review</button>
+                  <button class="btn btn-secondary btn-sm" onclick="runAnalysis('anomaly')">🔍 Anomaly Detection</button>
                 </div>
+                <div id="analysisResult" class="hidden mt-12"></div>
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
 
-          <div class="quick-questions" id="quickQuestions">
-            <button class="quick-q" onclick="sendQuick('What is the total amount?')">💰 Total amount?</button>
-            <button class="quick-q" onclick="sendQuick('Who is the customer?')">👤 Customer?</button>
-            <button class="quick-q" onclick="sendQuick('What is the invoice number?')">🔢 Invoice #?</button>
-            <button class="quick-q" onclick="sendQuick('What is the invoice date?')">📅 Date?</button>
-            <button class="quick-q" onclick="sendQuick('Summarize this document')">📋 Summarize</button>
+    <!-- ═══════════════════ CHAT TAB ═══════════════════ -->
+    <div class="tab-panel" id="panel-chat">
+      <div class="chat-layout">
+        <!-- Sidebar -->
+        <div class="chat-sidebar">
+          <div class="card" style="padding:16px;">
+            <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px;">Document Context</div>
+            <select id="chatDocSelect" style="width:100%; background:var(--bg-elevated); border:1px solid var(--border); color:var(--text-primary); padding:10px 12px; border-radius:var(--radius-sm); font-size:13px;">
+              <option value="">All Documents (cross-doc Q&A)</option>
+            </select>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:8px;">
+              Leave empty to search across all uploaded documents using RAG.
+            </div>
           </div>
+          <div class="card" style="padding:16px;">
+            <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px;">Session</div>
+            <input id="sessionIdInput" style="width:100%; background:var(--bg-elevated); border:1px solid var(--border); color:var(--text-primary); padding:8px 12px; border-radius:var(--radius-sm); font-size:13px;" value="default" placeholder="Session ID" />
+            <button class="btn btn-secondary btn-sm w-full mt-12" onclick="clearSession()">🗑 Clear History</button>
+          </div>
+          <div class="card" style="padding:16px;">
+            <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;">Quick Prompts</div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <button class="btn btn-secondary btn-sm" style="text-align:left;justify-content:flex-start;" onclick="sendQuick('What is the total amount?')">💰 Total amount?</button>
+              <button class="btn btn-secondary btn-sm" style="text-align:left;justify-content:flex-start;" onclick="sendQuick('Who are the parties involved?')">👤 Who are the parties?</button>
+              <button class="btn btn-secondary btn-sm" style="text-align:left;justify-content:flex-start;" onclick="sendQuick('Are there any risks or anomalies?')">⚠️ Any risks?</button>
+              <button class="btn btn-secondary btn-sm" style="text-align:left;justify-content:flex-start;" onclick="sendQuick('Summarize this document')">📋 Summarize</button>
+            </div>
+          </div>
+        </div>
 
+        <!-- Chat window -->
+        <div class="chat-main">
+          <div id="chatMessages" class="chat-messages">
+            <div class="msg assistant">
+              <div class="msg-bubble">
+                👋 Hi! I'm your document AI assistant powered by LangChain + GPT-4o-mini with RAG.<br><br>
+                Upload documents in the Library tab, then ask me anything — I'll retrieve relevant passages from ChromaDB to give you grounded, accurate answers.
+              </div>
+            </div>
+          </div>
           <div class="chat-input-area">
-            <textarea
-              class="chat-input"
-              id="chatInput"
-              placeholder="Ask anything about your documents..."
-              rows="1"
-              onkeydown="handleChatKey(event)"
-              oninput="autoResize(this)"
-            ></textarea>
-            <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Send">➤</button>
+            <div style="display:flex; gap:10px; margin-bottom:8px; font-size:12px; color:var(--text-muted);">
+              <span id="chatModelBadge" style="background:var(--accent-dim);color:var(--accent-hover);padding:2px 8px;border-radius:12px;">gpt-4o-mini</span>
+              <span id="chatRagBadge" style="background:var(--success-dim);color:var(--success);padding:2px 8px;border-radius:12px;">RAG: ChromaDB</span>
+            </div>
+            <div class="chat-input-row">
+              <textarea class="chat-input" id="chatInput" placeholder="Ask anything about your documents..." rows="2" onkeydown="chatKeydown(event)"></textarea>
+              <button class="btn btn-primary" id="sendBtn" onclick="sendMessage()">Send ↗</button>
+            </div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
 
-    <!-- ══ ANALYTICS VIEW ═══════════════════════════════════════════════ -->
-    <section class="view" id="view-analytics">
-      <div>
-        <h1 class="section-title">Analytics Dashboard</h1>
-        <p class="section-sub">Aggregated insights across your entire document collection.</p>
+    <!-- ═══════════════════ ANALYTICS TAB ═══════════════════ -->
+    <div class="tab-panel" id="panel-analytics">
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card"><div class="stat-label">Total Documents</div><div class="stat-value" id="statTotal">—</div></div>
+        <div class="stat-card"><div class="stat-label">With Amounts</div><div class="stat-value" id="statWithAmounts">—</div></div>
+        <div class="stat-card"><div class="stat-label">Total Value</div><div class="stat-value" id="statTotalValue">—</div></div>
+        <div class="stat-card"><div class="stat-label">Avg. Value</div><div class="stat-value" id="statAvgValue">—</div></div>
       </div>
 
-      <div id="analyticsContent">
-        <div class="empty-state">
-          <div class="icon">📊</div>
-          <p>Upload documents to see analytics</p>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Field Extraction Coverage</div>
+          <div class="card-subtitle">Percentage of documents where each field was found</div>
+          <div id="fieldStatsPanel"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Currency Breakdown</div>
+          <div class="card-subtitle">Documents by detected currency</div>
+          <div id="currencyPanel"></div>
+          <div class="card-title mt-24">Agent & RAG Status</div>
+          <div id="agentInfoPanel" class="mt-12"></div>
         </div>
       </div>
-    </section>
+    </div>
 
   </main>
 </div>
 
-<!-- ── Toast container ────────────────────────────────────────────── -->
-<div id="toast-container"></div>
-
-<!-- ══════════════════════════════════════════════════════════════════ -->
-<!-- ── JavaScript ───────────────────────────────────────────────── -->
-<!-- ══════════════════════════════════════════════════════════════════ -->
 <script>
-const API = '';   // relative URLs — served from same origin
+  // ── State ────────────────────────────────────────────────────────────────────
+  const API = '';   // same origin
+  let selectedDocId = null;
+  let allDocs = [];
 
-/* ── State ─────────────────────────────────────────────────────────────── */
-let state = {
-  documents: [],
-  selectedDocId: null,
-  chatDocId: 'all',
-  chatDocName: 'All Documents',
-  processingTimes: [],
-};
+  // ── Tab Switching ─────────────────────────────────────────────────────────────
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+    if (name === 'library') loadLibrary();
+    if (name === 'analytics') loadAnalytics();
+    if (name === 'chat') populateChatDocSelect();
+  }
 
-/* ── Navigation ─────────────────────────────────────────────────────────── */
-function showView(name) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.nav-pill').forEach(p => p.classList.remove('active'));
-  document.getElementById(`view-${name}`).classList.add('active');
-  document.getElementById(`nav-${name}`).classList.add('active');
-  if (name === 'documents') loadDocuments();
-  if (name === 'analytics') loadAnalytics();
-  if (name === 'chat') populateChatSidebar();
-}
-
-/* ── Toast ──────────────────────────────────────────────────────────────── */
-function toast(msg, type = 'info', duration = 3500) {
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.textContent = msg;
-  document.getElementById('toast-container').appendChild(el);
-  setTimeout(() => el.remove(), duration);
-}
-
-/* ── Status indicator ──────────────────────────────────────────────────── */
-function setStatus(text, ok = true) {
-  document.getElementById('statusText').textContent = text;
-  document.getElementById('statusDot').style.background = ok ? 'var(--success)' : 'var(--danger)';
-}
-
-/* ── File upload ────────────────────────────────────────────────────────── */
-const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault(); dropZone.classList.remove('drag-over');
-  handleFiles([...e.dataTransfer.files]);
-});
-dropZone.addEventListener('click', e => {
-  if (e.target.tagName !== 'BUTTON') fileInput.click();
-});
-fileInput.addEventListener('change', e => handleFiles([...e.target.files]));
-
-async function handleFiles(files) {
-  const pdfs = files.filter(f => f.name.toLowerCase().endsWith('.pdf'));
-  if (!pdfs.length) { toast('Please upload PDF files only.', 'error'); return; }
-
-  showProgress(0, `Uploading ${pdfs.length} file${pdfs.length > 1 ? 's' : ''}...`);
-  setStatus('Processing...', true);
-
-  const t0 = Date.now();
-  let success = 0;
-
-  for (let i = 0; i < pdfs.length; i++) {
-    const file = pdfs[i];
-    const pct = Math.round(((i) / pdfs.length) * 80);
-    showProgress(pct, `Processing ${file.name} (${i + 1}/${pdfs.length})...`);
+  // ── Health Check ──────────────────────────────────────────────────────────────
+  async function checkHealth() {
     try {
+      const r = await fetch(API + '/api/health');
+      const data = await r.json();
+      const dot = document.getElementById('statusDot');
+      const txt = document.getElementById('statusText');
+      if (data.status === 'healthy') {
+        dot.className = 'status-dot healthy';
+        txt.textContent = `Healthy · ${data.total_documents} docs`;
+      } else {
+        dot.className = 'status-dot';
+        txt.textContent = 'Degraded';
+      }
+    } catch {
+      document.getElementById('statusDot').className = 'status-dot';
+      document.getElementById('statusText').textContent = 'Offline';
+    }
+  }
+
+  // ── Upload ────────────────────────────────────────────────────────────────────
+  const uploadZone = document.getElementById('uploadZone');
+  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault(); uploadZone.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length) uploadFiles(files);
+  });
+  document.getElementById('fileInput').addEventListener('change', e => {
+    if (e.target.files.length) uploadFiles(e.target.files);
+  });
+
+  function triggerUpload() { document.getElementById('fileInput').click(); }
+
+  async function uploadFiles(files) {
+    const resultDiv = document.getElementById('uploadResult');
+    const progressDiv = document.getElementById('uploadProgress');
+    const uploadBtn = document.getElementById('uploadBtn');
+    resultDiv.innerHTML = '';
+    progressDiv.classList.remove('hidden');
+    uploadBtn.disabled = true;
+
+    let successCount = 0, failCount = 0;
+    const results = [];
+
+    for (const file of files) {
+      document.getElementById('uploadFileName').textContent = file.name;
+      document.getElementById('uploadPct').textContent = 'Processing...';
+
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch(`${API}/api/documents/upload`, { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.success) {
-        success++;
-        state.documents.unshift(data.document);
-        state.processingTimes.push(data.document.processing_time_ms);
-        toast(`✓ ${file.name} processed`, 'success');
-      } else {
-        toast(`✗ ${file.name}: ${data.error}`, 'error');
+
+      try {
+        const r = await fetch(API + '/api/documents/upload', { method: 'POST', body: fd });
+        const data = await r.json();
+        if (data.success) {
+          successCount++;
+          results.push({ file: file.name, ok: true, doc: data.document });
+        } else {
+          failCount++;
+          results.push({ file: file.name, ok: false, error: data.error });
+        }
+      } catch (e) {
+        failCount++;
+        results.push({ file: file.name, ok: false, error: e.message });
       }
-    } catch (err) {
-      toast(`✗ ${file.name}: Network error`, 'error');
+    }
+
+    progressDiv.classList.add('hidden');
+    uploadBtn.disabled = false;
+
+    resultDiv.innerHTML = results.map(r => r.ok
+      ? `<div class="alert alert-success">✅ <strong>${r.file}</strong> — ${r.doc.page_count} pages · ${formatPct(r.doc.field_completion_pct)} fields · ${r.doc.extracted_fields.amount || 'no amount'}</div>`
+      : `<div class="alert alert-error">❌ <strong>${r.file}</strong> — ${r.error}</div>`
+    ).join('');
+
+    checkHealth();
+    updateDocCount();
+  }
+
+  // ── Library ───────────────────────────────────────────────────────────────────
+  async function loadLibrary() {
+    try {
+      const r = await fetch(API + '/api/documents');
+      const data = await r.json();
+      allDocs = data.documents || [];
+      renderDocGrid(allDocs);
+      updateDocCount(allDocs.length);
+    } catch(e) {
+      document.getElementById('docGrid').innerHTML = `<div class="alert alert-error">Failed to load documents: ${e.message}</div>`;
     }
   }
 
-  showProgress(100, 'Done!');
-  setTimeout(() => hideProgress(), 1200);
-
-  updateUploadStats();
-  setStatus(`${success}/${pdfs.length} uploaded`, true);
-  fileInput.value = '';
-}
-
-function showProgress(pct, label) {
-  document.getElementById('progressContainer').classList.add('visible');
-  document.getElementById('progressFill').style.width = `${pct}%`;
-  document.getElementById('progressLabel').textContent = label;
-}
-function hideProgress() {
-  document.getElementById('progressContainer').classList.remove('visible');
-}
-
-function updateUploadStats() {
-  const docs = state.documents;
-  document.getElementById('statTotal').textContent = docs.length;
-
-  const amounts = docs.map(d => parseFloat((d.extracted_fields?.amount || '').replace(/[^0-9.]/g, ''))).filter(Boolean);
-  if (amounts.length) {
-    const total = amounts.reduce((a, b) => a + b, 0);
-    document.getElementById('statAmount').textContent = formatCurrency(total);
-  }
-
-  const completions = docs.map(d => d.field_completion_pct || 0);
-  if (completions.length) {
-    const avg = completions.reduce((a, b) => a + b, 0) / completions.length;
-    document.getElementById('statCompletion').textContent = `${avg.toFixed(0)}%`;
-  }
-
-  if (state.processingTimes.length) {
-    const avg = state.processingTimes.reduce((a, b) => a + b, 0) / state.processingTimes.length;
-    document.getElementById('statSpeed').textContent = avg.toFixed(0);
-  }
-}
-
-/* ── Documents view ─────────────────────────────────────────────────────── */
-async function loadDocuments() {
-  try {
-    const res = await fetch(`${API}/api/documents`);
-    const data = await res.json();
-    state.documents = data.documents || [];
-    renderDocList();
-    updateUploadStats();
-  } catch (err) {
-    toast('Could not load documents', 'error');
-  }
-}
-
-function renderDocList() {
-  const container = document.getElementById('docList');
-  if (!state.documents.length) {
-    container.innerHTML = `<div class="empty-state"><div class="icon">📁</div><p>No documents yet.</p></div>`;
-    return;
-  }
-  container.innerHTML = state.documents.map(doc => `
-    <div class="doc-item ${doc.id === state.selectedDocId ? 'selected' : ''}" 
-         id="doc-item-${doc.id}"
-         onclick="selectDoc('${doc.id}')">
-      <div class="doc-icon">📄</div>
-      <div class="doc-meta">
-        <div class="doc-name">${escHtml(doc.filename)}</div>
-        <div class="doc-details">
-          <span>${new Date(doc.processed_at).toLocaleDateString()}</span>
-          ${doc.invoice_number ? `<span>#${escHtml(doc.invoice_number)}</span>` : ''}
-          ${doc.amount ? `<span>${escHtml(doc.amount)}</span>` : ''}
+  function renderDocGrid(docs) {
+    const grid = document.getElementById('docGrid');
+    if (!docs.length) {
+      grid.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">No documents yet</div><div class="empty-text">Upload PDFs to build your document library</div></div>`;
+      return;
+    }
+    grid.innerHTML = docs.map(d => `
+      <div class="doc-card ${d.id === selectedDocId ? 'selected' : ''}" onclick="selectDoc('${d.id}')" id="doccard-${d.id}">
+        <div class="doc-name">📄 ${d.filename}</div>
+        <div class="doc-meta">
+          <span class="doc-meta-item">📅 ${formatDate(d.processed_at)}</span>
+          ${d.amount ? `<span class="doc-meta-item">💰 ${d.amount}</span>` : ''}
+        </div>
+        <div class="completion-bar"><div class="completion-fill" style="width:${d.field_completion_pct}%"></div></div>
+        <div class="doc-tags">
+          ${d.invoice_number ? `<span class="tag highlight">#${d.invoice_number}</span>` : ''}
+          <span class="tag">${formatPct(d.field_completion_pct)} fields</span>
         </div>
       </div>
-      <div class="doc-badge">${doc.field_completion_pct?.toFixed(0) || 0}% complete</div>
-      <div class="doc-actions">
-        <button class="icon-btn export" title="Export JSON" onclick="exportDoc('${doc.id}', event)">↓</button>
-        <button class="icon-btn" title="Delete" onclick="deleteDoc('${doc.id}', event)">✕</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-async function selectDoc(docId) {
-  state.selectedDocId = docId;
-  renderDocList();
-  try {
-    const res = await fetch(`${API}/api/documents/${docId}`);
-    const doc = await res.json();
-    renderDocDetail(doc);
-  } catch (err) {
-    toast('Could not load document details', 'error');
+    `).join('');
   }
-}
 
-function renderDocDetail(doc) {
-  const fields = doc.extracted_fields || {};
-  const allFields = ['invoice_number','date','due_date','name','seller','email','phone','amount','gst','currency'];
+  async function selectDoc(id) {
+    selectedDocId = id;
+    document.querySelectorAll('.doc-card').forEach(c => c.classList.remove('selected'));
+    const card = document.getElementById('doccard-' + id);
+    if (card) card.classList.add('selected');
 
-  const fieldHtml = allFields.map(key => {
-    const val = fields[key];
-    return `
-      <div class="field-chip">
-        <div class="field-key">${key.replace(/_/g,' ')}</div>
-        <div class="field-val ${val ? '' : 'empty'}">${val ? escHtml(String(val)) : 'Not found'}</div>
+    try {
+      const r = await fetch(API + `/api/documents/${id}`);
+      const doc = await r.json();
+      showDocDetail(doc);
+    } catch(e) {
+      console.error(e);
+    }
+  }
+
+  function showDocDetail(doc) {
+    document.getElementById('docDetail').classList.remove('hidden');
+    document.getElementById('detailFilename').textContent = `📄 ${doc.filename}`;
+    document.getElementById('detailMeta').textContent =
+      `${doc.page_count} pages · ${formatBytes(doc.file_size_bytes)} · ${formatDate(doc.processed_at)} · ${formatPct(doc.field_completion_pct)} extraction`;
+    document.getElementById('detailSummary').textContent = doc.summary || 'No summary available.';
+
+    const fields = doc.extracted_fields;
+    const fieldDefs = [
+      { key: 'invoice_number', label: 'Invoice #' },
+      { key: 'date', label: 'Date' },
+      { key: 'due_date', label: 'Due Date' },
+      { key: 'seller', label: 'Seller' },
+      { key: 'name', label: 'Customer' },
+      { key: 'amount', label: 'Amount' },
+      { key: 'gst', label: 'GST / Tax ID' },
+      { key: 'currency', label: 'Currency' },
+      { key: 'email', label: 'Email' },
+      { key: 'phone', label: 'Phone' },
+    ];
+
+    document.getElementById('detailFields').innerHTML = fieldDefs.map(f => {
+      const val = fields[f.key];
+      return `<div class="field-row">
+        <div class="field-label">${f.label}</div>
+        <div class="field-value ${val ? '' : 'empty'}">${val || 'Not found'}</div>
       </div>`;
-  }).join('');
+    }).join('');
 
-  const lineItems = fields.line_items || [];
-  const lineItemHtml = lineItems.length ? `
-    <div style="margin-top:20px;">
-      <div style="font-size:.85rem;font-weight:600;margin-bottom:10px;color:var(--text-secondary);">LINE ITEMS</div>
-      <table class="line-items-table">
-        <thead><tr><th>Description</th><th>Qty</th><th>Unit</th><th>Total</th></tr></thead>
-        <tbody>
-          ${lineItems.map(li => `<tr>
-            <td>${escHtml(li.description||'')}</td>
-            <td>${escHtml(String(li.quantity||''))}</td>
-            <td>${escHtml(li.unit_price||'')}</td>
-            <td>${escHtml(li.total||'')}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>` : '';
+    document.getElementById('analysisResult').classList.add('hidden');
+    document.getElementById('analysisResult').innerHTML = '';
+  }
 
-  document.getElementById('docDetail').innerHTML = `
-    <div style="display:flex;flex-direction:column;gap:20px;">
-      <div>
-        <div style="font-weight:700;font-size:1.05rem;margin-bottom:4px;">${escHtml(doc.filename)}</div>
-        <div style="font-size:.8rem;color:var(--text-muted);">${doc.page_count} page${doc.page_count!==1?'s':''} · ${(doc.file_size_bytes/1024).toFixed(0)} KB · ${doc.processing_time_ms?.toFixed(0)}ms</div>
-      </div>
+  async function runAnalysis(type) {
+    if (!selectedDocId) return;
+    const resultDiv = document.getElementById('analysisResult');
+    resultDiv.classList.remove('hidden');
+    resultDiv.innerHTML = `<div class="alert alert-info">🤖 Running ${type} analysis via LangChain agent...</div>`;
 
-      <div>
-        <div class="completion-row">
-          <div class="completion-track" style="flex:1"><div class="completion-fill" style="width:${doc.field_completion_pct||0}%"></div></div>
-          <div class="completion-label">${doc.field_completion_pct?.toFixed(0)||0}%</div>
-        </div>
-        <div style="font-size:.78rem;color:var(--text-muted);">Field extraction completeness</div>
-      </div>
-
-      <div>
-        <div style="font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:10px;">AI SUMMARY</div>
-        <div style="font-size:.88rem;line-height:1.6;color:var(--text-secondary);background:var(--bg-elevated);padding:14px;border-radius:var(--radius-sm);border:1px solid var(--border);">
-          ${escHtml(doc.summary || 'No summary available')}
-        </div>
-      </div>
-
-      <div>
-        <div style="font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:10px;">EXTRACTED FIELDS</div>
-        <div class="fields-grid">${fieldHtml}</div>
-        ${lineItemHtml}
-      </div>
-
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button onclick="exportDoc('${doc.id}')" style="padding:8px 16px;border-radius:var(--radius-sm);border:1px solid var(--border-active);background:transparent;color:var(--accent-1);font-size:.82rem;cursor:pointer;font-family:inherit;">Export JSON</button>
-        <button onclick="exportDocCsv('${doc.id}')" style="padding:8px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:.82rem;cursor:pointer;font-family:inherit;">Export CSV</button>
-        <button onclick="chatWithDoc('${doc.id}','${escHtml(doc.filename)}')" style="padding:8px 16px;border-radius:var(--radius-sm);border:none;background:var(--accent-grad);color:#fff;font-size:.82rem;cursor:pointer;font-family:inherit;">Chat with Doc 💬</button>
-      </div>
-    </div>`;
-}
-
-async function deleteDoc(docId, e) {
-  e?.stopPropagation();
-  if (!confirm('Delete this document?')) return;
-  try {
-    await fetch(`${API}/api/documents/${docId}`, { method: 'DELETE' });
-    state.documents = state.documents.filter(d => d.id !== docId);
-    if (state.selectedDocId === docId) {
-      state.selectedDocId = null;
-      document.getElementById('docDetail').innerHTML = `<div class="empty-state"><div class="icon">👈</div><p>Select a document</p></div>`;
+    try {
+      const r = await fetch(API + '/api/chat/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ document_id: selectedDocId, analysis_type: type }),
+      });
+      const data = await r.json();
+      resultDiv.innerHTML = `
+        <div class="card" style="background:var(--bg-elevated);margin-top:0;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-weight:600;font-size:13px;">${type.toUpperCase()} Analysis</span>
+            <span class="tag">${data.model_used} · ${Math.round(data.latency_ms)}ms</span>
+          </div>
+          <div style="font-size:14px;line-height:1.7;white-space:pre-wrap;">${data.findings}</div>
+          ${data.key_points.length ? `<div class="doc-tags mt-12">${data.key_points.map(p => `<span class="tag">${p}</span>`).join('')}</div>` : ''}
+        </div>`;
+    } catch(e) {
+      resultDiv.innerHTML = `<div class="alert alert-error">Analysis failed: ${e.message}</div>`;
     }
-    renderDocList();
-    updateUploadStats();
-    toast('Document deleted', 'success');
-  } catch (err) {
-    toast('Delete failed', 'error');
-  }
-}
-
-function exportDoc(docId, e) {
-  e?.stopPropagation();
-  window.open(`${API}/api/documents/${docId}/export/json`, '_blank');
-}
-function exportDocCsv(docId, e) {
-  e?.stopPropagation();
-  window.open(`${API}/api/documents/${docId}/export/csv`, '_blank');
-}
-
-/* ── Chat view ──────────────────────────────────────────────────────────── */
-function populateChatSidebar() {
-  const list = document.getElementById('chatDocList');
-  const docItems = state.documents.map(d => `
-    <div class="chat-doc-item ${d.id === state.chatDocId ? 'selected' : ''}"
-         data-id="${d.id}"
-         onclick="selectChatDoc('${d.id}', '${escHtml(d.filename)}', this)">
-      📄 ${escHtml(d.filename.length > 30 ? d.filename.slice(0,27)+'...' : d.filename)}
-    </div>`).join('');
-  list.innerHTML = `
-    <div class="chat-doc-item all-docs ${state.chatDocId === 'all' ? 'selected' : ''}" 
-         data-id="all" onclick="selectChatDoc('all', 'All Documents', this)">
-      🌐 All Documents
-    </div>
-    ${docItems}`;
-}
-
-function selectChatDoc(id, name, el) {
-  state.chatDocId = id;
-  state.chatDocName = name;
-  document.querySelectorAll('.chat-doc-item').forEach(e => e.classList.remove('selected'));
-  el.classList.add('selected');
-  document.getElementById('chatDocName').textContent = name;
-}
-
-function chatWithDoc(docId, filename) {
-  showView('chat');
-  // small delay to let sidebar render
-  setTimeout(() => {
-    const el = document.querySelector(`[data-id="${docId}"]`);
-    if (el) selectChatDoc(docId, filename, el);
-    populateChatSidebar();
-  }, 100);
-}
-
-function handleChatKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-}
-function autoResize(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-}
-function sendQuick(q) {
-  document.getElementById('chatInput').value = q;
-  sendMessage();
-}
-
-async function sendMessage() {
-  const input = document.getElementById('chatInput');
-  const question = input.value.trim();
-  if (!question) return;
-
-  input.value = ''; input.style.height = 'auto';
-  document.getElementById('sendBtn').disabled = true;
-
-  appendMsg('user', question);
-  const typingEl = appendTyping();
-
-  try {
-    const body = {
-      question,
-      mode: 'qa',
-      document_id: state.chatDocId === 'all' ? null : state.chatDocId,
-    };
-    const res = await fetch(`${API}/api/chat/ask`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    typingEl.remove();
-    appendMsg('ai', data.answer, {
-      confidence: data.confidence,
-      source: data.source_document,
-      model: data.model_used,
-      latency: data.latency_ms,
-    });
-    document.getElementById('chatModelLabel').textContent = `Model: ${data.model_used || 'flan-t5-large'}`;
-  } catch (err) {
-    typingEl.remove();
-    appendMsg('ai', '⚠️ Network error — make sure the server is running.');
   }
 
-  document.getElementById('sendBtn').disabled = false;
-}
-
-function formatMarkdown(text) {
-  let html = escHtml(text);
-  // Headers (### Text)
-  html = html.replace(/^### (.*$)/gim, '<h3 style="margin-top:12px;margin-bottom:6px;color:var(--accent-3);">$1</h3>');
-  html = html.replace(/^#### (.*$)/gim, '<h4 style="margin-top:10px;margin-bottom:4px;color:var(--text-primary);">$1</h4>');
-  // Bold
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong style="color:#fff;">$1</strong>');
-  // Bullets
-  html = html.replace(/^- (.*$)/gim, '<div style="margin-left:14px;">• $1</div>');
-  return html.replace(/\n/g, '<br>');
-}
-
-function appendMsg(role, text, meta) {
-  const container = document.getElementById('chatMessages');
-  const div = document.createElement('div');
-  div.className = `msg ${role}`;
-
-  const metaHtml = meta ? `
-    <div class="msg-meta">
-      ${meta.source ? `<span style="background:var(--bg-card);padding:2px 8px;border-radius:4px;border:1px solid var(--border);">📄 ${escHtml(meta.source)}</span>` : ''}
-      ${meta.latency ? `<span>⚡ ${(meta.latency / 1000).toFixed(1)}s</span>` : ''}
-    </div>` : '';
-
-  div.innerHTML = `
-    <div class="msg-avatar">${role==='user'?'👤':'🧠'}</div>
-    <div>
-      <div class="msg-bubble">${formatMarkdown(text)}</div>
-      ${metaHtml}
-    </div>`;
-  container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
-  return div;
-}
-
-function appendTyping() {
-  const container = document.getElementById('chatMessages');
-  const div = document.createElement('div');
-  div.className = 'msg ai typing-indicator';
-  div.innerHTML = `
-    <div class="msg-avatar">🧠</div>
-    <div class="msg-bubble"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
-  container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
-  return div;
-}
-
-/* ── Analytics view ─────────────────────────────────────────────────────── */
-async function loadAnalytics() {
-  if (!state.documents.length) return;
-  try {
-    const res = await fetch(`${API}/api/documents/analytics/collection`);
-    const data = await res.json();
-    renderAnalytics(data);
-  } catch (err) {
-    toast('Could not load analytics', 'error');
+  async function deleteDoc() {
+    if (!selectedDocId || !confirm('Delete this document?')) return;
+    await fetch(API + `/api/documents/${selectedDocId}`, { method: 'DELETE' });
+    document.getElementById('docDetail').classList.add('hidden');
+    selectedDocId = null;
+    loadLibrary();
+    checkHealth();
   }
-}
 
-function renderAnalytics(data) {
-  const fieldStats = (data.field_stats || []).sort((a,b) => b.completion_pct - a.completion_pct);
+  function exportJSON() {
+    if (!selectedDocId) return;
+    window.open(API + `/api/documents/${selectedDocId}/export/json`);
+  }
 
-  const currencyHtml = Object.entries(data.currency_breakdown || {}).map(([c, n]) =>
-    `<div style="display:flex;justify-content:space-between;font-size:.88rem;padding:8px 0;border-bottom:1px solid var(--border);">
-      <span style="color:var(--text-secondary);">${c}</span>
-      <span style="font-weight:600;">${n} doc${n!==1?'s':''}</span>
-    </div>`
-  ).join('') || '<div style="color:var(--text-muted);font-size:.85rem;">No data yet</div>';
+  function exportCSV() {
+    if (!selectedDocId) return;
+    window.open(API + `/api/documents/${selectedDocId}/export/csv`);
+  }
 
-  document.getElementById('analyticsContent').innerHTML = `
-    <div class="analytics-grid">
+  function chatWithDoc() {
+    if (!selectedDocId) return;
+    switchTab('chat');
+    document.getElementById('chatDocSelect').value = selectedDocId;
+  }
 
-      <div class="card">
-        <div style="font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:16px;">COLLECTION OVERVIEW</div>
-        <div class="stats-grid" style="grid-template-columns:1fr 1fr;">
-          <div class="stat-card"><div class="stat-icon">📂</div><div class="stat-value">${data.total_documents}</div><div class="stat-label">Total Docs</div></div>
-          <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value">${formatCurrency(data.total_amount)}</div><div class="stat-label">Total Value</div></div>
-          <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-value">${formatCurrency(data.average_amount)}</div><div class="stat-label">Avg Invoice</div></div>
-          <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value">${data.documents_with_amounts}</div><div class="stat-label">With Amounts</div></div>
-        </div>
-      </div>
+  // ── Semantic Search ───────────────────────────────────────────────────────────
+  async function semanticSearch() {
+    const q = document.getElementById('semanticSearchInput').value.trim();
+    if (!q) return;
+    const resDiv = document.getElementById('searchResults');
+    resDiv.classList.remove('hidden');
+    resDiv.innerHTML = '<div class="alert alert-info">🔍 Searching ChromaDB...</div>';
 
-      <div class="card">
-        <div style="font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:16px;">FIELD EXTRACTION RATES</div>
-        <div class="progress-list">
-          ${fieldStats.map(f => `
-            <div class="progress-item">
-              <div class="progress-item-header">
-                <span class="field-name">${f.field.replace(/_/g,' ')}</span>
-                <span class="field-pct">${f.completion_pct}%</span>
-              </div>
-              <div class="mini-track"><div class="mini-fill" style="width:${f.completion_pct}%"></div></div>
-            </div>`).join('')}
-        </div>
-      </div>
-
-      <div class="card">
-        <div style="font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:16px;">CURRENCY BREAKDOWN</div>
-        ${currencyHtml}
-      </div>
-
-      <div class="card">
-        <div style="font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:16px;">RECENT UPLOADS</div>
-        ${(data.recent_uploads||[]).map(d => `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
-            <div>
-              <div style="font-size:.88rem;font-weight:500;">${escHtml(d.filename)}</div>
-              <div style="font-size:.76rem;color:var(--text-muted);">${new Date(d.processed_at).toLocaleDateString()}</div>
-            </div>
-            <div class="doc-badge">${d.field_completion_pct?.toFixed(0)||0}%</div>
-          </div>`).join('') || '<div style="color:var(--text-muted);font-size:.85rem;">No documents</div>'}
-      </div>
-
-    </div>`;
-}
-
-/* ── Utilities ──────────────────────────────────────────────────────────── */
-function escHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function formatCurrency(val) {
-  if (!val || val === 0) return '—';
-  if (val >= 1e6) return `${(val/1e6).toFixed(1)}M`;
-  if (val >= 1e3) return `${(val/1e3).toFixed(1)}K`;
-  return val.toFixed(0);
-}
-
-/* ── Startup ────────────────────────────────────────────────────────────── */
-async function init() {
-  try {
-    const res = await fetch(`${API}/api/health`);
-    const data = await res.json();
-    setStatus(data.models_loaded ? 'AI Ready' : 'Loading...', data.status === 'healthy');
-    if (data.total_documents > 0) {
-      await loadDocuments();
+    try {
+      const r = await fetch(API + `/api/documents/search/semantic?q=${encodeURIComponent(q)}&top_k=5`);
+      if (!r.ok) { resDiv.innerHTML = '<div class="alert alert-warn">Semantic search unavailable. ChromaDB may not be initialized.</div>'; return; }
+      const data = await r.json();
+      if (!data.results.length) { resDiv.innerHTML = '<div class="alert alert-info">No results found.</div>'; return; }
+      resDiv.innerHTML = `
+        <div class="card">
+          <div class="card-title">Search Results <span style="font-weight:400;color:var(--text-muted);font-size:13px;">${data.total_results} chunks for "${q}"</span></div>
+          <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px;">
+            ${data.results.map(r => `
+              <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                  <span style="font-size:13px;font-weight:600;">${r.filename}</span>
+                  <span style="font-size:11px;color:var(--success);background:var(--success-dim);padding:2px 8px;border-radius:12px;">${(r.similarity * 100).toFixed(1)}% match</span>
+                </div>
+                <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;">${r.excerpt}</div>
+              </div>`).join('')}
+          </div>
+        </div>`;
+    } catch(e) {
+      resDiv.innerHTML = `<div class="alert alert-error">Search error: ${e.message}</div>`;
     }
-  } catch (err) {
-    setStatus('Server offline', false);
-    toast('Cannot connect to server. Make sure python server.py is running.', 'error', 6000);
   }
-}
 
-document.addEventListener('DOMContentLoaded', init);
+  document.getElementById('semanticSearchInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') semanticSearch();
+  });
+
+  // ── Chat ──────────────────────────────────────────────────────────────────────
+  function populateChatDocSelect() {
+    const sel = document.getElementById('chatDocSelect');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">All Documents (cross-doc Q&A)</option>';
+    allDocs.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.filename;
+      sel.appendChild(opt);
+    });
+    sel.value = current;
+  }
+
+  function chatKeydown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  }
+
+  function sendQuick(text) {
+    document.getElementById('chatInput').value = text;
+    sendMessage();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const question = input.value.trim();
+    if (!question) return;
+
+    const docId = document.getElementById('chatDocSelect').value;
+    const sessionId = document.getElementById('sessionIdInput').value || 'default';
+
+    appendMsg('user', question);
+    input.value = '';
+
+    const typingId = appendTyping();
+    document.getElementById('sendBtn').disabled = true;
+
+    try {
+      const r = await fetch(API + `/api/chat/ask?session_id=${encodeURIComponent(sessionId)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, document_id: docId || undefined, mode: 'qa' }),
+      });
+      const data = await r.json();
+      removeTyping(typingId);
+      appendMsg('assistant', data.answer, {
+        model: data.model_used,
+        latency: data.latency_ms,
+        source: data.source_document,
+        confidence: data.confidence,
+      });
+    } catch(e) {
+      removeTyping(typingId);
+      appendMsg('assistant', `Error: ${e.message}`);
+    }
+    document.getElementById('sendBtn').disabled = false;
+  }
+
+  function appendMsg(role, content, meta = null) {
+    const container = document.getElementById('chatMessages');
+    const el = document.createElement('div');
+    el.className = `msg ${role}`;
+    const metaHtml = meta ? `
+      <div class="msg-meta">${meta.model} · ${Math.round(meta.latency)}ms · ${(meta.confidence * 100).toFixed(0)}% confidence</div>
+    ` : '';
+    el.innerHTML = `<div class="msg-bubble">${escapeHtml(content)}</div>${metaHtml}`;
+    container.appendChild(el);
+    container.scrollTop = container.scrollHeight;
+    return el;
+  }
+
+  function appendTyping() {
+    const container = document.getElementById('chatMessages');
+    const id = 'typing-' + Date.now();
+    const el = document.createElement('div');
+    el.id = id;
+    el.className = 'msg assistant';
+    el.innerHTML = `<div class="msg-bubble"><div class="typing-indicator"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+    container.appendChild(el);
+    container.scrollTop = container.scrollHeight;
+    return id;
+  }
+
+  function removeTyping(id) {
+    document.getElementById(id)?.remove();
+  }
+
+  async function clearSession() {
+    const sessionId = document.getElementById('sessionIdInput').value || 'default';
+    await fetch(API + `/api/chat/history/${sessionId}`, { method: 'DELETE' });
+    document.getElementById('chatMessages').innerHTML = `<div class="msg assistant"><div class="msg-bubble">Session cleared. Start a new conversation!</div></div>`;
+  }
+
+  // ── Analytics ─────────────────────────────────────────────────────────────────
+  async function loadAnalytics() {
+    try {
+      const [analyticsR, agentR] = await Promise.all([
+        fetch(API + '/api/documents/analytics/collection'),
+        fetch(API + '/api/chat/agent/info'),
+      ]);
+      const analytics = await analyticsR.json();
+      const agent = await agentR.json();
+
+      document.getElementById('statTotal').textContent = analytics.total_documents;
+      document.getElementById('statWithAmounts').textContent = analytics.documents_with_amounts;
+      document.getElementById('statTotalValue').textContent = analytics.total_amount > 0 ? formatMoney(analytics.total_amount) : '—';
+      document.getElementById('statAvgValue').textContent = analytics.average_amount > 0 ? formatMoney(analytics.average_amount) : '—';
+
+      document.getElementById('fieldStatsPanel').innerHTML = analytics.field_stats.map(f => `
+        <div class="field-stat-bar">
+          <div class="field-stat-name">${f.field}</div>
+          <div class="field-stat-track"><div class="field-stat-fill" style="width:${f.completion_pct}%"></div></div>
+          <div class="field-stat-pct">${f.completion_pct}%</div>
+        </div>`).join('');
+
+      const currencies = Object.entries(analytics.currency_breakdown || {});
+      document.getElementById('currencyPanel').innerHTML = currencies.length
+        ? currencies.map(([k, v]) => `
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;">
+            <span>${k}</span><span style="font-weight:600;">${v} docs</span>
+          </div>`).join('')
+        : '<div class="text-muted text-sm">No currency data yet</div>';
+
+      document.getElementById('agentInfoPanel').innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="field-row"><div class="field-label">Agent</div><div class="field-value">${agent.agent_type}</div></div>
+          <div class="field-row"><div class="field-label">Model</div><div class="field-value">${agent.model}</div></div>
+          <div class="field-row"><div class="field-label">Status</div><div class="field-value" style="color:${agent.agent_ready ? 'var(--success)' : 'var(--warning)'}">${agent.status}</div></div>
+          <div class="field-row"><div class="field-label">RAG</div><div class="field-value" style="color:${agent.rag.enabled ? 'var(--success)' : 'var(--warning)'}">
+            ${agent.rag.enabled ? `✅ ${agent.rag.chunks_indexed} chunks indexed` : '⚠ Unavailable'}
+          </div></div>
+        </div>`;
+    } catch(e) {
+      console.error('Analytics error:', e);
+    }
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────────
+  function formatDate(iso) {
+    return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+  function formatBytes(b) {
+    return b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : (b / 1024).toFixed(0) + ' KB';
+  }
+  function formatPct(p) { return Math.round(p) + '%'; }
+  function formatMoney(n) { return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n); }
+  function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
+  function updateDocCount(n) {
+    if (n !== undefined) { document.getElementById('docCount').textContent = n; return; }
+    fetch(API + '/api/documents').then(r => r.json()).then(d => document.getElementById('docCount').textContent = (d.documents || []).length).catch(() => {});
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────────
+  checkHealth();
+  updateDocCount();
+  setInterval(checkHealth, 30000);
 </script>
 </body>
 </html>

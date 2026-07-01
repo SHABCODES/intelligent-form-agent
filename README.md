@@ -1,51 +1,73 @@
-# Intelligent Form Agent 🤖
+# Intelligent Document AI Platform 🤖
 
-A **LangChain ReAct agent** that autonomously reads, understands, and analyzes invoices and business documents. Upload a PDF — the agent decides which tools to use, extracts structured data, assesses risks, and answers natural language questions.
+A **production-grade** agentic AI platform for intelligent PDF document processing, RAG-backed Q&A, and structured data extraction.
 
-Built to demonstrate agentic AI architecture: orchestrator → tools → structured outputs → stateful conversations.
+Upload a PDF → the system extracts structured fields, generates an AI summary, indexes chunks into ChromaDB, and persists everything to a SQLAlchemy database. Then ask questions in natural language — the LangChain ReAct agent retrieves relevant passages via RAG and answers with full traceability.
 
 ---
 
 ## Architecture
 
 ```
-PDF Upload → Text Extraction (PyMuPDF/OCR)
-                    ↓
-         LangChain ReAct Agent Loop
-         ┌──────────────────────────┐
-         │  Reason → Act → Observe  │
-         │                          │
-         │  Tools:                  │
-         │  • extract_invoice_fields│  ← Pydantic structured output
-         │  • summarize_document    │  ← Pydantic structured output
-         │  • analyze_risks         │  ← Pydantic structured output
-         │  • answer_question       │  ← Natural language
-         └──────────────────────────┘
-                    ↓
-         In-Memory Checkpointer (stateful multi-turn)
-                    ↓
-         FastAPI REST API  ←→  Frontend UI
+┌─────────────────────────────────────────────────────────┐
+│              Frontend (Dark-mode SPA)                   │
+│    Upload │ Library │ Chat │ Analytics                  │
+└───────────────────────┬─────────────────────────────────┘
+                        │ HTTP / REST  (async FastAPI)
+┌───────────────────────▼─────────────────────────────────┐
+│                   FastAPI (async)                       │
+│  /documents  │  /chat  │  /health  │  /metrics          │
+│         CORS · Request timing middleware               │
+└───────┬───────────────────────┬─────────────────────────┘
+        │                       │
+┌───────▼────────┐   ┌──────────▼──────────────────────┐
+│ Document       │   │  LangChain ReAct Agent           │
+│ Service        │   │                                  │
+│ (async)        │   │  5 Tools:                        │
+│                │   │  ① extract_invoice_fields        │
+│ ┌────────────┐ │   │  ② summarize_document            │
+│ │SQLAlchemy  │ │   │  ③ analyze_risks                 │
+│ │(aiosqlite) │ │   │  ④ answer_question ← RAG-backed  │
+│ └────────────┘ │   │  ⑤ search_similar_documents      │
+│                │   │                                  │
+│ ┌────────────┐ │◄──┤  _ConversationCheckpointer       │
+│ │ ChromaDB   │ │   │  ConversationRepository (DB)     │
+│ │  (RAG)     │ │   └──────────────────────────────────┘
+│ └────────────┘ │
+│                │
+│ ┌────────────┐ │
+│ │ TTL Cache  │ │
+│ │ (in-mem /  │ │
+│ │  Redis)    │ │
+│ └────────────┘ │
+│                │
+│ PyMuPDF + OCR  │
+└────────────────┘
 ```
 
-**Key concepts demonstrated:**
-- **ReAct agent loop** — the agent reasons about which tool to call, calls it, observes the result, and repeats until it has a final answer
-- **Tool-based architecture** — each capability is a discrete tool with a clear interface
-- **Pydantic structured outputs** — every tool returns validated, typed data
-- **State persistence** — `_ConversationCheckpointer` stores session history across turns
-- **Multi-step workflows** — complex queries (e.g. "full analysis") trigger multiple tool calls automatically
+### RAG Pattern (Retrieve-Augment-Generate)
+
+When you ask a question, `answer_question` tool:
+1. **Retrieve** — semantic search in ChromaDB (sentence-transformer embeddings)
+2. **Augment** — top-k chunks injected as context into the LLM prompt
+3. **Generate** — GPT-4o-mini produces a grounded, citation-aware answer
 
 ---
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
+|---|---|
 | Agent framework | LangChain (ReAct agent) |
 | LLM | GPT-4o-mini via OpenAI API |
 | Structured outputs | Pydantic v2 |
-| State persistence | In-memory checkpointer |
-| Backend API | FastAPI + Uvicorn |
-| PDF processing | PyMuPDF + Tesseract OCR |
+| Database (async) | SQLAlchemy 2.0 + aiosqlite (SQLite → Postgres-upgradeable) |
+| Vector store / RAG | ChromaDB + sentence-transformers/all-MiniLM-L6-v2 |
+| State persistence | In-memory checkpointer + SQLAlchemy ConversationRepository |
+| Backend API | FastAPI (async) + Uvicorn |
+| PDF processing | PyMuPDF + Tesseract OCR fallback |
+| Cache | In-memory TTL cache (Redis-compatible interface) |
+| Testing | pytest + pytest-asyncio (35+ tests) |
 | Containerization | Docker + docker-compose |
 
 ---
@@ -53,78 +75,88 @@ PDF Upload → Text Extraction (PyMuPDF/OCR)
 ## Quick Start
 
 ### 1. Clone & configure
+
 ```bash
 git clone https://github.com/SHABCODES/intelligent-form-agent.git
 cd intelligent-form-agent
 cp .env.example .env
-# Edit .env and add your OPENAI_API_KEY
+# Edit .env — add your OPENAI_API_KEY
 ```
 
-### 2. Run with Docker (recommended)
+### 2. Docker (recommended)
+
 ```bash
 docker-compose up --build
 ```
 
-### 3. Or run locally
+### 3. Local dev
+
 ```bash
 python -m venv venv
-source venv/bin/activate       # Windows: venv\Scripts\activate
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # Linux/macOS
 pip install -r requirements.txt
 python server.py
 ```
 
-Visit **http://localhost:8000** for the UI, **http://localhost:8000/docs** for the API.
+Visit **http://localhost:8000** for the UI, **http://localhost:8000/docs** for Swagger.
 
 ---
 
-## API Endpoints
+## API Reference
 
-### Upload a document
+### Upload document
 ```bash
 curl -X POST http://localhost:8000/api/documents/upload \
   -F "file=@invoice.pdf"
 ```
 
-### Ask the agent a question
+### Ask the agent (RAG-backed)
 ```bash
-curl -X POST http://localhost:8000/api/chat/ask \
+curl -X POST "http://localhost:8000/api/chat/ask?session_id=my-session" \
   -H "Content-Type: application/json" \
-  -d '{"question": "What is the total amount and who is the seller?", "document_id": "<doc_id>"}'
+  -d '{"question": "What is the total amount?", "document_id": "<doc_id>"}'
 ```
 
-### Run a full agentic analysis
+### Full agentic analysis
 ```bash
 curl -X POST http://localhost:8000/api/chat/analyze \
   -H "Content-Type: application/json" \
   -d '{"document_id": "<doc_id>", "analysis_type": "risk"}'
 ```
 
-### Check conversation state
+### Semantic search (ChromaDB)
+```bash
+curl "http://localhost:8000/api/documents/search/semantic?q=cloud+hosting+invoice"
+```
+
+### Get conversation history (DB-persisted)
 ```bash
 curl http://localhost:8000/api/chat/history/my-session
 ```
 
-### Agent info
+### Export extracted data
 ```bash
-curl http://localhost:8000/api/chat/agent/info
+curl http://localhost:8000/api/documents/<doc_id>/export/json
+curl http://localhost:8000/api/documents/<doc_id>/export/csv
 ```
 
 ---
 
 ## Analysis Types
 
-| Type | What the agent does |
-|------|-------------------|
-| `full` | Calls all 3 tools: extract fields + summarize + risk assessment |
-| `risk` | Focused risk analysis — flags missing fields, anomalies, compliance issues |
+| Type | Agent behaviour |
+|---|---|
+| `full` | Calls 3 tools: extract fields + summarize + risk assessment |
+| `risk` | Focused risk/compliance analysis — flags missing fields, anomalies |
 | `anomaly` | Detects inconsistencies and suspicious patterns |
-| `comparison` | Structured extraction + summary for comparison across docs |
+| `comparison` | Structured extraction + summary for multi-document comparison |
 
 ---
 
-## Structured Output Schemas
+## Pydantic Output Schemas
 
-The agent returns validated Pydantic models:
+Every tool returns a validated Pydantic v2 model:
 
 ```python
 class ExtractedInvoiceFields(BaseModel):
@@ -136,6 +168,8 @@ class ExtractedInvoiceFields(BaseModel):
     amount: Optional[str]
     currency: Optional[str]
     tax: Optional[str]
+    email: Optional[str]
+    phone: Optional[str]
     line_items: List[Dict[str, Any]]
 
 class RiskAssessment(BaseModel):
@@ -160,34 +194,47 @@ class DocumentSummary(BaseModel):
 intelligent-form-agent/
 ├── src/
 │   ├── api/
-│   │   ├── app.py                  # FastAPI factory
+│   │   ├── app.py                   # FastAPI factory + startup (DB init)
 │   │   └── routes/
-│   │       ├── chat.py             # Agent chat & analysis endpoints
-│   │       ├── documents.py        # Upload, list, export endpoints
-│   │       └── health.py           # Health check
+│   │       ├── chat.py              # Agent Q&A, analysis, session management
+│   │       ├── documents.py         # Upload, list, search, export endpoints
+│   │       └── health.py            # Health check + metrics
 │   ├── core/
-│   │   ├── config.py               # Settings (pydantic-settings)
+│   │   ├── config.py                # pydantic-settings (DATABASE_URL, OPENAI_API_KEY, etc.)
 │   │   ├── exceptions.py
 │   │   └── logger.py
+│   ├── db/                          ← SQLAlchemy layer
+│   │   ├── database.py              # Async engine, session factory, get_db()
+│   │   ├── models.py                # Document, ExtractedField, ConversationMessage ORM
+│   │   └── repository.py           # DocumentRepository, ConversationRepository
 │   ├── models/
-│   │   └── schemas.py              # API request/response schemas
+│   │   └── schemas.py               # API request/response Pydantic schemas
 │   ├── services/
-│   │   ├── agent_service.py        # ★ LangChain ReAct agent + checkpointer
-│   │   ├── ai_service.py           # Thin wrapper → agent_service
-│   │   ├── document_service.py     # Document storage & retrieval
-│   │   ├── extraction_service.py   # Regex field extraction (fallback)
-│   │   └── cache_service.py        # In-memory cache
+│   │   ├── agent_service.py         # ★ LangChain ReAct agent + 5 tools + RAG
+│   │   ├── ai_service.py            # Thin facade (preload, summarize)
+│   │   ├── document_service.py      # Async processing pipeline
+│   │   ├── extraction_service.py    # Regex field extraction
+│   │   ├── cache_service.py         # In-memory TTL cache / Redis
+│   │   └── vector_store.py          # ChromaDB wrapper (add, search, delete)
 │   └── utils/
-│       ├── pdf_utils.py            # PyMuPDF + OCR text extraction
-│       └── text_utils.py
-├── data/                           # Sample invoice PDFs
-├── frontend/                       # Single-page UI
-├── tests/                          # Pytest test suite
-├── .env.example                    # Environment config template
+│       ├── pdf_utils.py             # PyMuPDF + Tesseract OCR
+│       └── text_utils.py            # chunk_text, clean_text, extract_currency
+├── tests/
+│   ├── conftest.py                  # Fixtures: in-memory DB, async client, mocks
+│   ├── test_services.py             # Unit: extraction, cache, text utils, vector store
+│   ├── test_db.py                   # Async repository CRUD tests
+│   ├── test_agent.py                # Agent schemas, checkpointer, RAG, fallback
+│   └── test_api.py                  # Integration: full HTTP lifecycle
+├── frontend/
+│   └── index.html                  # Dark-mode SPA (Upload/Library/Chat/Analytics)
+├── data/                            # SQLite DB persisted here (gitignored)
+├── chroma_db/                       # ChromaDB index (gitignored)
+├── uploads/                         # Uploaded PDFs (gitignored)
+├── .env.example
 ├── Dockerfile
 ├── docker-compose.yml
-├── requirements.txt
-└── server.py                       # Entry point
+├── pyproject.toml                   # pytest config (asyncio_mode=auto)
+└── requirements.txt
 ```
 
 ---
@@ -195,8 +242,27 @@ intelligent-form-agent/
 ## Running Tests
 
 ```bash
-pytest tests/ -v
+pytest tests/ -v --tb=short
 ```
+
+35+ tests — no OpenAI API key required. ChromaDB is mocked. Uses in-memory SQLite.
+
+---
+
+## Upgrading to PostgreSQL
+
+Change one line in `.env`:
+
+```env
+DATABASE_URL=postgresql+asyncpg://user:password@localhost/docai
+```
+
+Install the asyncpg driver:
+```bash
+pip install asyncpg
+```
+
+Zero application code changes needed.
 
 ---
 

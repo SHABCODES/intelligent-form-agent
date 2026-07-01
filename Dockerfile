@@ -13,38 +13,32 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy and install dependencies first (layer caching)
+# Install Python dependencies (layer-cached)
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
+# Pre-download sentence-transformer embedding model at build time
+# This avoids a slow cold start on first document upload
+RUN python -c "\
+from sentence_transformers import SentenceTransformer; \
+SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); \
+print('Embedding model cached.')" \
+    || echo "Embedding model download skipped (will download at runtime)"
+
 # Copy application code
 COPY . .
 
-# Create necessary directories
+# Create persistent data directories
 RUN mkdir -p data uploads chroma_db
 
 # Non-root user for security
 RUN useradd -m -u 1000 docai && chown -R docai:docai /app
 USER docai
 
-# Pre-download HuggingFace models at build time to avoid cold start
-RUN python -c "
-from transformers import pipeline
-import torch
-device = 0 if torch.cuda.is_available() else -1
-print('Pre-loading models...')
-pipeline('text2text-generation', model='google/flan-t5-large', device=device)
-pipeline('question-answering', model='distilbert-base-cased-distilled-squad', device=device)
-pipeline('summarization', model='sshleifer/distilbart-cnn-12-6', device=device)
-from sentence_transformers import SentenceTransformer
-SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
-print('Models cached.')
-" || echo "Model pre-download skipped (will download at runtime)"
-
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s \
     CMD curl -f http://localhost:8000/api/health || exit 1
 
 CMD ["python", "server.py"]
