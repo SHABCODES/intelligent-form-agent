@@ -145,9 +145,15 @@ class TestRAGContextRetrieval:
         assert "Invoice Number" in context or "Grand Total" in context
 
     def test_rag_returns_empty_when_unavailable(self):
-        with patch("src.services.agent_service._retrieve_rag_context", return_value=("", 0)):
+        with patch("src.services.vector_store.get_vector_store") as mock_factory:
+            mock_vs = MagicMock()
+            mock_vs.is_available = False
+            mock_factory.return_value = mock_vs
             context, count = _retrieve_rag_context("any query")
         assert count == 0
+        assert context == ""
+
+
 
     def test_rag_with_doc_id_filter(self, mock_vector_store):
         context, count = _retrieve_rag_context(

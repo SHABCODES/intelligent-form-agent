@@ -124,21 +124,24 @@ def sample_invoice_text():
     """
 
 
-@pytest.fixture
+@pytest.fixture(scope="session", autouse=True)
 def mock_vector_store():
-    """Mock ChromaDB vector store — avoids requiring ChromaDB installed."""
-    with patch("src.services.vector_store.get_vector_store") as mock_factory:
-        mock_vs = MagicMock()
-        mock_vs.is_available = True
-        mock_vs.document_count.return_value = 0
-        mock_vs.add_document.return_value = None
-        mock_vs.search.return_value = [
-            {
-                "text": "Invoice Number: INV/2024/001\nGrand Total: ₹88,500.00",
-                "metadata": {"doc_id": "test-doc-id", "filename": "invoice.pdf", "chunk_index": 0},
-                "similarity": 0.92,
-            }
-        ]
-        mock_vs.delete_document.return_value = None
-        mock_factory.return_value = mock_vs
-        yield mock_vs
+    """Mock ChromaDB vector store singleton globally — avoids requiring ChromaDB/HF model downloads."""
+    import src.services.vector_store
+    mock_vs = MagicMock()
+    mock_vs.is_available = True
+    mock_vs.document_count.return_value = 0
+    mock_vs.add_document.return_value = None
+    mock_vs.search.return_value = [
+        {
+            "text": "Invoice Number: INV/2024/001\nGrand Total: ₹88,500.00",
+            "metadata": {"doc_id": "test-doc-id", "filename": "invoice.pdf", "chunk_index": 0},
+            "similarity": 0.92,
+        }
+    ]
+    mock_vs.delete_document.return_value = None
+    
+    # Override singleton instance directly to bypass namespace-import mocking traps
+    src.services.vector_store._vector_store_instance = mock_vs
+    yield mock_vs
+

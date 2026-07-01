@@ -181,11 +181,12 @@ class TestInMemoryCache:
 class TestTextUtils:
 
     def test_chunk_text_basic(self):
-        text = "word " * 300   # 1500 chars
-        chunks = chunk_text(text, chunk_size=512, overlap=64)
+        text = "word " * 600   # 600 words
+        chunks = chunk_text(text, chunk_size=100, overlap=10)
         assert len(chunks) > 1
         for chunk in chunks:
-            assert len(chunk) <= 512 + 10  # small tolerance
+            assert len(chunk.split()) <= 100
+
 
     def test_chunk_text_short(self):
         text = "Short text."
