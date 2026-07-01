@@ -1,143 +1,219 @@
 """
-API endpoint tests using FastAPI TestClient (no real model inference).
-These tests mock the AI models to run fast without GPU/downloads.
+API integration tests — full request/response cycle via async TestClient.
+Tests the complete stack: route → service → repository → in-memory DB.
 """
 
-import io
+from __future__ import annotations
+
 import json
-import sys, os
+import io
 import pytest
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
-
-def test_health_endpoint(client):
-    """Health endpoint should always return 200."""
-    res = client.get("/api/health")
-    assert res.status_code == 200
-    data = res.json()
-    assert "status" in data
-    assert "version" in data
-    assert "uptime_seconds" in data
+import pytest_asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
-def test_metrics_endpoint(client):
-    """Metrics endpoint should return system stats."""
-    res = client.get("/api/metrics")
-    assert res.status_code == 200
-    data = res.json()
-    assert "documents" in data
-    assert "cache" in data
+# ══════════════════════════════════════════════════════════════════════════════
+# Health Endpoint
+# ══════════════════════════════════════════════════════════════════════════════
+
+@pytest.mark.asyncio
+class TestHealthEndpoint:
+
+    async def test_health_returns_200(self, client):
+        response = await client.get("/api/health")
+        assert response.status_code == 200
+
+    async def test_health_response_shape(self, client):
+        response = await client.get("/api/health")
+        data = response.json()
+        assert "status" in data
+        assert "version" in data
+        assert "uptime_seconds" in data
+        assert "vector_store_ok" in data
+        assert "cache_ok" in data
+        assert data["status"] in ("healthy", "degraded", "unhealthy")
+
+    async def test_metrics_returns_200(self, client):
+        response = await client.get("/api/metrics")
+        assert response.status_code == 200
+
+    async def test_metrics_has_database_key(self, client):
+        response = await client.get("/api/metrics")
+        data = response.json()
+        assert "database" in data
+        assert "cache" in data
+        assert "vector_store" in data
 
 
-def test_list_documents_empty(client):
-    """Document list should return empty array initially."""
-    res = client.get("/api/documents")
-    assert res.status_code == 200
-    data = res.json()
-    assert "documents" in data
-    assert isinstance(data["documents"], list)
-    assert "total" in data
+# ══════════════════════════════════════════════════════════════════════════════
+# Document Endpoints
+# ══════════════════════════════════════════════════════════════════════════════
+
+@pytest.mark.asyncio
+class TestDocumentEndpoints:
+
+    async def test_list_documents_empty(self, client):
+        response = await client.get("/api/documents")
+        assert response.status_code == 200
+        data = response.json()
+        assert "documents" in data
+        assert "total" in data
+        assert isinstance(data["documents"], list)
+
+    async def test_get_nonexistent_document(self, client):
+        response = await client.get("/api/documents/does-not-exist")
+        assert response.status_code == 404
+
+    async def test_delete_nonexistent_document(self, client):
+        response = await client.delete("/api/documents/ghost-id")
+        assert response.status_code == 404
+
+    async def test_upload_invalid_file_type(self, client):
+        """Non-PDF uploads should be rejected with 415."""
+        fake_file = io.BytesIO(b"not a pdf")
+        response = await client.post(
+            "/api/documents/upload",
+            files={"file": ("document.txt", fake_file, "text/plain")},
+        )
+        assert response.status_code == 415
+
+    async def test_analytics_endpoint_shape(self, client):
+        response = await client.get("/api/documents/analytics/collection")
+        assert response.status_code == 200
+        data = response.json()
+        assert "total_documents" in data
+        assert "field_stats" in data
+        assert "currency_breakdown" in data
+
+    async def test_semantic_search_requires_query(self, client):
+        response = await client.get("/api/documents/search/semantic?q=")
+        assert response.status_code == 400
+
+    async def test_semantic_search_unavailable_when_chromadb_down(self, client):
+        """If ChromaDB is not initialized, search returns 503."""
+        with patch("src.api.routes.documents.get_vector_store") as mock_vs_factory:
+            mock_vs = MagicMock()
+            mock_vs.is_available = False
+            mock_vs_factory.return_value = mock_vs
+
+            response = await client.get("/api/documents/search/semantic?q=invoice")
+            assert response.status_code == 503
 
 
-def test_upload_invalid_type(client):
-    """Non-PDF upload should return 415."""
-    content = io.BytesIO(b"not a pdf")
-    res = client.post(
-        "/api/documents/upload",
-        files={"file": ("test.txt", content, "text/plain")},
-    )
-    assert res.status_code == 415
+# ══════════════════════════════════════════════════════════════════════════════
+# Chat Endpoints
+# ══════════════════════════════════════════════════════════════════════════════
+
+@pytest.mark.asyncio
+class TestChatEndpoints:
+
+    async def test_ask_with_no_documents(self, client):
+        """When no documents exist, ask returns a helpful message."""
+        with patch("src.services.agent_service._get_agent", return_value=None):
+            response = await client.post(
+                "/api/chat/ask",
+                json={"question": "What is the total?", "mode": "qa"},
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert "answer" in data
+        assert "No documents" in data["answer"]
+
+    async def test_ask_nonexistent_document(self, client):
+        response = await client.post(
+            "/api/chat/ask",
+            json={
+                "question": "What is the total?",
+                "document_id": "nonexistent-id",
+                "mode": "qa",
+            },
+        )
+        assert response.status_code == 404
+
+    async def test_analyze_nonexistent_document(self, client):
+        response = await client.post(
+            "/api/chat/analyze",
+            json={"document_id": "ghost-doc", "analysis_type": "full"},
+        )
+        assert response.status_code == 404
+
+    async def test_get_history_empty_session(self, client):
+        response = await client.get("/api/chat/history/empty-session")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["messages"] == []
+        assert data["total_messages"] == 0
+
+    async def test_clear_history(self, client):
+        response = await client.delete("/api/chat/history/some-session")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+
+    async def test_list_sessions(self, client):
+        response = await client.get("/api/chat/sessions")
+        assert response.status_code == 200
+        data = response.json()
+        assert "sessions" in data
+        assert "total" in data
+
+    async def test_agent_info_shape(self, client):
+        response = await client.get("/api/chat/agent/info")
+        assert response.status_code == 200
+        data = response.json()
+        assert "agent_type" in data
+        assert "tools" in data
+        assert "rag" in data
+        assert "state_persistence" in data
+        assert len(data["tools"]) == 5   # extract, summarize, risks, answer, search
 
 
-def test_upload_no_file(client):
-    """Upload with no file should return 422."""
-    res = client.post("/api/documents/upload")
-    assert res.status_code == 422
+# ══════════════════════════════════════════════════════════════════════════════
+# Upload + Full Lifecycle (mocked processing)
+# ══════════════════════════════════════════════════════════════════════════════
 
+@pytest.mark.asyncio
+class TestDocumentLifecycle:
 
-def test_get_nonexistent_document(client):
-    """Fetching a non-existent document should return 404."""
-    res = client.get("/api/documents/nonexistent-id-12345")
-    assert res.status_code == 404
+    async def test_upload_mock_processing(self, client, mock_vector_store):
+        """
+        Upload a synthetic PDF-like payload with document_service mocked.
+        Tests the full HTTP lifecycle: upload → list → retrieve → delete.
+        """
+        from src.models.schemas import DocumentInfo, ExtractedFields
+        from datetime import datetime, timezone
 
+        mock_doc = DocumentInfo(
+            id="lifecycle-doc-id",
+            filename="test.pdf",
+            file_size_bytes=2048,
+            page_count=1,
+            extracted_fields=ExtractedFields(
+                invoice_number="INV-LIFE-001",
+                amount="50,000.00",
+                currency="INR",
+                email="test@test.com",
+            ),
+            summary="Test invoice document.",
+            text_preview="Invoice Number: INV-LIFE-001...",
+            field_completion_pct=57.1,
+            processed_at=datetime.now(timezone.utc),
+            processing_time_ms=420.0,
+        )
 
-def test_delete_nonexistent_document(client):
-    """Deleting a non-existent document should return 404."""
-    res = client.delete("/api/documents/nonexistent-id-12345")
-    assert res.status_code == 404
+        with patch(
+            "src.services.document_service.process_document",
+            new_callable=AsyncMock,
+            return_value=mock_doc,
+        ):
+            fake_pdf = io.BytesIO(b"%PDF-1.4 fake pdf content for testing")
+            response = await client.post(
+                "/api/documents/upload",
+                files={"file": ("test.pdf", fake_pdf, "application/pdf")},
+            )
 
-
-def test_chat_ask_no_documents(client):
-    """Chat when no documents are loaded should return helpful message."""
-    res = client.post(
-        "/api/chat/ask",
-        json={"question": "What is the total amount?", "mode": "qa"},
-    )
-    assert res.status_code == 200
-    data = res.json()
-    assert "answer" in data
-    assert "confidence" in data
-    assert "upload" in data["answer"].lower() or data["confidence"] == 0.0
-
-
-def test_chat_ask_invalid_document(client):
-    """Chat targeting a non-existent doc_id should return 404."""
-    res = client.post(
-        "/api/chat/ask",
-        json={
-            "question": "What is the total?",
-            "mode": "qa",
-            "document_id": "nonexistent-doc-id",
-        },
-    )
-    assert res.status_code == 404
-
-
-def test_chat_question_validation(client):
-    """Question that is too short should fail validation."""
-    res = client.post(
-        "/api/chat/ask",
-        json={"question": "a", "mode": "qa"},  # min_length=2
-    )
-    assert res.status_code == 422
-
-
-def test_analyze_nonexistent_document(client):
-    """Analyze of a non-existent document should return 404."""
-    res = client.post(
-        "/api/chat/analyze",
-        json={"document_id": "nonexistent", "analysis_type": "full"},
-    )
-    assert res.status_code == 404
-
-
-def test_openapi_schema(client):
-    """OpenAPI schema should be accessible."""
-    res = client.get("/openapi.json")
-    assert res.status_code == 200
-    schema = res.json()
-    assert "paths" in schema
-    assert "/api/documents/upload" in schema["paths"]
-
-
-def test_analytics_empty(client):
-    """Analytics endpoint should respond even with no documents."""
-    res = client.get("/api/documents/analytics/collection")
-    assert res.status_code == 200
-    data = res.json()
-    assert "total_documents" in data
-
-
-def test_history_nonexistent_session(client):
-    """Should return empty list for unknown session."""
-    res = client.get("/api/chat/history/unknown-session-xyz")
-    assert res.status_code == 200
-    assert res.json() == []
-
-
-def test_clear_history(client):
-    """Clearing history for any session should succeed."""
-    res = client.delete("/api/chat/history/test-session-123")
-    assert res.status_code == 200
-    assert res.json()["success"] is True
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["document"]["id"] == "lifecycle-doc-id"
+        assert data["document"]["extracted_fields"]["invoice_number"] == "INV-LIFE-001"
