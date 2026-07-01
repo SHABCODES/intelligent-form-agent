@@ -14,9 +14,14 @@ Architecture:
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 import json
 import time
 from typing import Any, Dict, List, Optional
+
+# Context variable to track RAG chunks retrieved during agent execution
+rag_chunks_var: ContextVar[int] = ContextVar("rag_chunks_var", default=0)
+
 
 from pydantic import BaseModel, Field
 
@@ -92,7 +97,10 @@ def _retrieve_rag_context(query: str, doc_id: Optional[str] = None) -> tuple[str
             text = chunk.get("text", "")
             context_parts.append(f"[Chunk {i} | similarity={sim:.3f}]\n{text}")
 
-        return "\n\n".join(context_parts), len(chunks)
+        chunk_count = len(chunks)
+        rag_chunks_var.set(rag_chunks_var.get() + chunk_count)
+
+        return "\n\n".join(context_parts), chunk_count
 
     except Exception as exc:
         log.warning("RAG retrieval failed: %s", exc)
@@ -430,7 +438,7 @@ def run_agent(
         f"User question: {question}"
     )
 
-    rag_chunks_total = 0
+    rag_chunks_var.set(0)
     try:
         response = agent.invoke({"input": full_input})
         answer = response.get("output", "No answer generated.")
@@ -458,7 +466,7 @@ def run_agent(
             model_used=f"{settings.LLM_MODEL}/langchain-react",
             tool_calls=tool_calls,
             structured_data=structured_data,
-            rag_chunks_used=rag_chunks_total,
+            rag_chunks_used=rag_chunks_var.get(),
             latency_ms=round((time.perf_counter() - t0) * 1000, 1),
         )
 
@@ -468,6 +476,7 @@ def run_agent(
             answer=f"Agent encountered an error: {str(exc)}",
             confidence=0.0,
             model_used="error",
+            rag_chunks_used=rag_chunks_var.get(),
             latency_ms=round((time.perf_counter() - t0) * 1000, 1),
         )
 

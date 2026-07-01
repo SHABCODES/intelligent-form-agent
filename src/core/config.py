@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     ALLOWED_ORIGINS: List[str] = ["*"]
+    API_KEY: str = ""
+
 
     # ── Paths ─────────────────────────────────────────────────────────────────
     BASE_DIR: Path = Path(__file__).resolve().parents[2]

@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-07-01 22:36:00",
+  "extraction_accuracy_pct": 24.0,
+  "total_extracted_fields": 25,
+  "avg_latency_ms": 230.85701000018162,
+  "p95_latency_ms": 297.66599999857135,
+  "concurrency_speedup": 15.497061286603337,
+  "rag_groundedness_pct": 94.8,
+  "rag_context_precision_pct": 91.2,
+  "hallucination_rate_pct": 1.2
+}

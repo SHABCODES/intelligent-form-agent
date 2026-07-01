@@ -1,0 +1,52 @@
+[
+  {
+    "filename": "Invoice_AU_Subscription_20240301-SAAS.pdf",
+    "ground_truth": {
+      "invoice_number": "INV-AU-2401",
+      "date": "2024-03-01",
+      "seller": "CloudScale Australia",
+      "amount": "149.00",
+      "currency": "AUD"
+    }
+  },
+  {
+    "filename": "Invoice_SG_Enterprise_SG2024-0012.pdf",
+    "ground_truth": {
+      "invoice_number": "SG2024-0012",
+      "date": "2024-01-15",
+      "seller": "SingaTech Enterprise Solutions",
+      "amount": "12500.00",
+      "currency": "SGD"
+    }
+  },
+  {
+    "filename": "Invoice_UK_Freelance_JD-2024-03-15.pdf",
+    "ground_truth": {
+      "invoice_number": "JD-2024-03-15",
+      "date": "2024-03-15",
+      "seller": "JD Digital Services",
+      "amount": "450.00",
+      "currency": "GBP"
+    }
+  },
+  {
+    "filename": "Invoice_US_Consulting_2024-Q1-456.pdf",
+    "ground_truth": {
+      "invoice_number": "2024-Q1-456",
+      "date": "2024-02-28",
+      "seller": "US Consulting Group LLC",
+      "amount": "8500.00",
+      "currency": "USD"
+    }
+  },
+  {
+    "filename": "Test_Invoice_INV-2024-0847.pdf",
+    "ground_truth": {
+      "invoice_number": "INV-2024-0847",
+      "date": "2024-08-01",
+      "seller": "TechParts Distribution Inc",
+      "amount": "1249.99",
+      "currency": "USD"
+    }
+  }
+]
