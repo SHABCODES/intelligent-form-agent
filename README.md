@@ -1,4 +1,4 @@
-# Intelligent Document AI Platform 🤖
+# Intelligent Document AI Platform 
 
 A **production-grade** agentic AI platform for intelligent PDF document processing, RAG-backed Q&A, and structured data extraction.
 
