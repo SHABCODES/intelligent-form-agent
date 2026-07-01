@@ -1,8 +1,15 @@
 """
 FastAPI application factory.
+
+Startup sequence:
+  1. Create DB tables (SQLAlchemy + SQLite/Postgres)
+  2. Warm up ChromaDB vector store
+  3. Log agent status
+  4. Mount frontend SPA
 """
 
 from __future__ import annotations
+
 import time
 from pathlib import Path
 
@@ -15,8 +22,6 @@ from src.core.config import settings
 from src.core.logger import get_logger
 from src.api.routes import health, documents, chat
 from src.services.ai_service import preload_models
-from src.services.cache_service import get_cache
-from src.services.vector_store import get_vector_store
 
 log = get_logger(__name__)
 
@@ -31,7 +36,7 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json",
     )
 
-    # ── CORS ──────────────────────────────────────────────────────────────
+    # ── CORS ──────────────────────────────────────────────────────────────────
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.ALLOWED_ORIGINS,
@@ -40,7 +45,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # ── Request timing middleware ──────────────────────────────────────────
+    # ── Request timing middleware ──────────────────────────────────────────────
     @app.middleware("http")
     async def add_timing_header(request: Request, call_next):
         t0 = time.perf_counter()
@@ -49,12 +54,12 @@ def create_app() -> FastAPI:
         response.headers["X-Process-Time-Ms"] = str(elapsed)
         return response
 
-    # ── Routers ───────────────────────────────────────────────────────────
+    # ── Routers ────────────────────────────────────────────────────────────────
     app.include_router(health.router, prefix="/api")
     app.include_router(documents.router, prefix="/api")
     app.include_router(chat.router, prefix="/api")
 
-    # ── Static files & frontend SPA ──────────────────────────────────────
+    # ── Static files & frontend SPA ───────────────────────────────────────────
     frontend_dir = settings.FRONTEND_DIR
     if frontend_dir.exists():
         app.mount("/static", StaticFiles(directory=str(frontend_dir)), name="static")
@@ -63,31 +68,28 @@ def create_app() -> FastAPI:
         async def serve_spa():
             return FileResponse(str(frontend_dir / "index.html"))
 
-    # ── Startup ────────────────────────────────────────────────────────────
+    # ── Startup ────────────────────────────────────────────────────────────────
     @app.on_event("startup")
     async def startup_event():
         log.info("=" * 60)
         log.info("  %s v%s", settings.APP_NAME, settings.APP_VERSION)
         log.info("=" * 60)
 
-        # Ensure upload directory exists
+        # Ensure directories exist
         settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        settings.DATA_DIR.mkdir(parents=True, exist_ok=True)
+        settings.CHROMA_DIR.mkdir(parents=True, exist_ok=True)
 
-        # Warm up cache
-        cache = get_cache()
-        log.info("Cache backend: %s", cache.stats().get("backend", "unknown"))
+        # Initialize DB tables
+        from src.db.database import create_tables
+        await create_tables()
+        log.info("Database ready at %s", settings.DATABASE_URL)
 
-        # Warm up vector store
-        vs = get_vector_store()
-        if vs.is_available:
-            log.info("ChromaDB ready with %d chunks indexed", vs.document_count())
-        else:
-            log.warning("ChromaDB not available — semantic search disabled")
-
-        # Pre-load AI models
-        log.info("Warming up AI models...")
+        # Warm up AI services (logs key/model status)
         preload_models()
-        log.info("Platform ready — visit http://%s:%d", settings.HOST, settings.PORT)
+
+        log.info("Platform ready — http://%s:%d", settings.HOST, settings.PORT)
+        log.info("API docs     — http://%s:%d/docs", settings.HOST, settings.PORT)
 
     @app.on_event("shutdown")
     async def shutdown_event():
