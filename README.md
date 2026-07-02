@@ -1,6 +1,6 @@
 # Intelligent Document AI Platform 
 
-A **production-grade** agentic AI platform for intelligent PDF document processing, RAG-backed Q&A, and structured data extraction.
+A full-stack agentic AI platform for PDF document processing, RAG-backed Q&A, and structured data extraction.
 
 Upload a PDF → the system extracts structured fields, generates an AI summary, indexes chunks into ChromaDB, and persists everything to a SQLAlchemy database. Then ask questions in natural language — the LangChain ReAct agent retrieves relevant passages via RAG and answers with full traceability.
 
@@ -72,33 +72,38 @@ When you ask a question, `answer_question` tool:
 
 ---
 
-## Performance & Evaluation Metrics 📈
+## Evaluation
 
-To validate the "production-grade" claims, the system was benchmarked against the original synchronous, Hugging Face pipeline-based prototype. Benchmarks were conducted using a dataset of 100 mixed-quality invoice PDFs (50 digital, 50 scanned/low-contrast).
+The platform ships with a benchmarking script (`scripts/evaluate.py`) that measures field extraction accuracy against a hand-labeled ground-truth dataset (`tests/data/eval_dataset.json`) and writes results to `data/benchmark_results.json` and `docs/evaluation_report.md`.
 
-### 1. Accuracy & Retrieval Metrics (RAG Triad)
+```bash
+python scripts/evaluate.py
+```
 
-| Metric | Sync Prototype (Before) | Async Agentic Platform (After) | Delta | Impact |
-| :--- | :--- | :--- | :--- | :--- |
-| **Field Extraction Accuracy** | 71.2% | **96.5%** | **+25.3%** | Tesseract OCR fallback + LLM tool validations successfully parsed noisy/scanned documents where direct extraction failed. |
-| **RAG Groundedness (Faithfulness)** | 62.4% | **94.8%** | **+32.4%** | Switching to semantic chunking (512-char overlap) and ChromaDB retrieval eliminated model hallucinations by grounding context. |
-| **Context Retrieval Precision** | 58.0% | **91.2%** | **+33.2%** | Chunk-based vector search isolated relevant invoice clauses, removing distracting out-of-context filler text. |
-| **Hallucination Rate** | 18.5% | **< 1.8%** | **-90.2%** | Strict agent tool definitions and context anchoring reduced incorrect responses. |
+**Current results (last run, see `data/benchmark_results.json`):**
 
-### 2. Latency & Concurrency Benchmarks
-*Tested under a concurrent load of 20 simulated users uploading and querying documents simultaneously.*
+| Metric | Result | Notes |
+| :--- | :--- | :--- |
+| **Field extraction accuracy** | **56%** (14/25 fields) | Regex-based extractor (`extraction_service.py`) against 5 hand-verified invoices spanning AU/SG/UK/US/IN formats. |
+| **Async scheduling overhead (20 simulated concurrent requests)** | ~230ms avg | Measures `asyncio.gather` scheduling behavior, not full pipeline throughput. Not yet wired to the real upload/extraction path. |
+| **In-memory TTL cache hit latency** | < 2ms | Measured directly from `cache_service.py`. |
 
-| Operational Metric | Sync Prototype (Before) | Async Agentic Platform (After) | Speedup / Improvement |
-| :--- | :--- | :--- | :--- |
-| **Avg. Process Latency (Digital PDF)** | 4.8s | **1.2s** | **4.0x faster** |
-| **Avg. Process Latency (Scanned + OCR)** | 14.5s | **3.8s** | **3.8x faster** |
-| **Request Timeout Rate (Concurrency = 20)**| 35.0% | **0.0%** | **100% Reliability** |
-| **In-Memory TTL Cache Hit Latency** | N/A | **< 2ms** | **Instantaneous** |
+RAG groundedness, context precision, and hallucination rate are **not yet measured** — the current `evaluate_rag()` function returns placeholder values and needs a real evaluation method (e.g. LLM-as-judge scoring of retrieved chunks vs. generated answers) before those numbers can be reported honestly.
 
-### 3. API & Infrastructure Cost Reduction
+**Known failure modes (from the eval run):**
+- **Seller extraction** fails when the invoice has no explicit label (e.g. "Seller:", "Vendor:") and just opens with the company name — 3/5 invoices in the eval set hit this.
+- **Amount extraction** matches the first dollar figure in the document (often a line item) rather than the invoice total — pattern ordering in `_AMOUNT_PATTERNS` needs to prioritize "Total Due" / "TOTAL AMOUNT" matches.
+- **Currency detection** defaults to USD on non-USD invoices (AUD/SGD misclassified) — bug in `extract_currency()`.
+- **₹-symbol invoices** (Indian GST format) fail almost every field — likely a text-encoding/regex issue specific to the ₹ character.
 
-* **Token Consumption Efficiency:** By using ChromaDB semantic search to retrieve only the top-3 matching chunks (~1,500 tokens) instead of passing the entire document context (~8,000+ tokens), LLM input token costs were reduced by **81.2%**.
-* **CPU-Bound Task Offloading:** Wrapping CPU-heavy PDF parsing, OCR, and embedding computations in `asyncio.to_thread` prevents event loop starvation, keeping API routes responsive at under **15ms** overhead.
+### Roadmap
+
+- [ ] Fix `_AMOUNT_PATTERNS` ordering to prefer total/grand-total matches over line-item amounts
+- [ ] Fix `extract_currency()` default-to-USD bug
+- [ ] Fix ₹ symbol handling for Indian GST invoices
+- [ ] Add unlabeled-seller detection (e.g. first line of document as fallback) or LLM-based extraction fallback in `agent_service.py` when regex confidence is low
+- [ ] Implement real RAG groundedness/context-precision scoring in `evaluate_rag()`
+- [ ] Wire `simulate_load()` to the actual document upload/extraction pipeline instead of `asyncio.sleep` stand-ins
 
 ---
 

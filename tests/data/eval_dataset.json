@@ -2,10 +2,10 @@
   {
     "filename": "Invoice_AU_Subscription_20240301-SAAS.pdf",
     "ground_truth": {
-      "invoice_number": "INV-AU-2401",
-      "date": "2024-03-01",
-      "seller": "CloudScale Australia",
-      "amount": "149.00",
+      "invoice_number": "20240301-SAAS",
+      "date": "01/03/2024",
+      "seller": "CloudFlow Pty Ltd",
+      "amount": "4672.80",
       "currency": "AUD"
     }
   },
@@ -13,9 +13,9 @@
     "filename": "Invoice_SG_Enterprise_SG2024-0012.pdf",
     "ground_truth": {
       "invoice_number": "SG2024-0012",
-      "date": "2024-01-15",
-      "seller": "SingaTech Enterprise Solutions",
-      "amount": "12500.00",
+      "date": "22 January 2024",
+      "seller": "SYNERGY SOLUTIONS PTE LTD",
+      "amount": "67517.33",
       "currency": "SGD"
     }
   },
@@ -23,9 +23,9 @@
     "filename": "Invoice_UK_Freelance_JD-2024-03-15.pdf",
     "ground_truth": {
       "invoice_number": "JD-2024-03-15",
-      "date": "2024-03-15",
-      "seller": "JD Digital Services",
-      "amount": "450.00",
+      "date": "15 March 2024",
+      "seller": "James Davidson",
+      "amount": "6800.00",
       "currency": "GBP"
     }
   },
@@ -33,9 +33,9 @@
     "filename": "Invoice_US_Consulting_2024-Q1-456.pdf",
     "ground_truth": {
       "invoice_number": "2024-Q1-456",
-      "date": "2024-02-28",
-      "seller": "US Consulting Group LLC",
-      "amount": "8500.00",
+      "date": "April 12, 2024",
+      "seller": "Strategic Advisors LLC",
+      "amount": "27250.00",
       "currency": "USD"
     }
   },
@@ -43,10 +43,10 @@
     "filename": "Test_Invoice_INV-2024-0847.pdf",
     "ground_truth": {
       "invoice_number": "INV-2024-0847",
-      "date": "2024-08-01",
-      "seller": "TechParts Distribution Inc",
-      "amount": "1249.99",
-      "currency": "USD"
+      "date": "15-March-2024",
+      "seller": "ACME SOLUTIONS PVT LTD",
+      "amount": "200600.00",
+      "currency": "INR"
     }
   }
 ]
